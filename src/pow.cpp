@@ -15,8 +15,13 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     assert(pindexLast != nullptr);
     unsigned int nProofOfWorkLimit = UintToArith256(params.powLimit).GetCompact();
 
+    int nHeightNext = pindexLast->nHeight + 1;
+    if(nHeightNext >= params.BTQHeight && nHeightNext < params.BTQHeight + params.BTQPremineWindow) {
+    	// Lowest difficulty for BitcoinQuark premining period.
+    	return nProofOfWorkLimit;
+    }
     // Only change once per difficulty adjustment interval
-    if ((pindexLast->nHeight+1) % params.DifficultyAdjustmentInterval() != 0)
+    else if (nHeightNext % params.DifficultyAdjustmentInterval() != 0)
     {
         if (params.fPowAllowMinDifficultyBlocks)
         {

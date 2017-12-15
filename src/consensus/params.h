@@ -46,6 +46,11 @@ struct Params {
     int BIP65Height;
     /** Block height at which BIP66 becomes active */
     int BIP66Height;
+    /** Block height at which BitcoinQuark hard fork becomes active */
+    int BTQHeight;
+    /** Premining blocks for BitcoinQuark hard fork */
+    int BTQPremineWindow;
+
     /**
      * Minimum blocks including miner confirmation of the total of 2016 blocks in a retargeting period,
      * (nPowTargetTimespan / nPowTargetSpacing) which is also used for BIP9 deployments.
