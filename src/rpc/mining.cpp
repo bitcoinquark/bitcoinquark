@@ -411,6 +411,8 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
             // TestBlockValidity only supports blocks built on the current Tip
             if (block.hashPrevBlock != pindexPrev->GetBlockHash())
                 return "inconclusive-not-best-prevblk";
+            if (block.nHeight != (uint32_t)pindexPrev->nHeight + 1)
+                return "inconclusive-bad-height";
             CValidationState state;
             TestBlockValidity(state, Params(), block, pindexPrev, false, true);
             return BIP22ValidationResult(state);
@@ -532,6 +534,7 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
     // Update nTime
     UpdateTime(pblock, consensusParams, pindexPrev);
     pblock->nNonce = 0;
+    pblock->nSolution.clear();
 
     // NOTE: If at some point we support pre-segwit miners post-segwit-activation, this needs to take segwit support into consideration
     const bool fPreSegWit = (THRESHOLD_ACTIVE != VersionBitsState(pindexPrev, consensusParams, Consensus::DEPLOYMENT_SEGWIT, versionbitscache));

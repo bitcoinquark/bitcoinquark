@@ -7,8 +7,12 @@
 
 #include "arith_uint256.h"
 #include "chain.h"
+#include "chainparams.h"
+#include "crypto/equihash.h"
 #include "primitives/block.h"
+#include "streams.h"
 #include "uint256.h"
+#include "util.h"
 
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)
 {
@@ -16,7 +20,8 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     unsigned int nProofOfWorkLimit = UintToArith256(params.powLimit).GetCompact();
 
     int nHeightNext = pindexLast->nHeight + 1;
-    if(nHeightNext >= params.BTQHeight && nHeightNext < params.BTQHeight + params.BTQPremineWindow) {
+    if(nHeightNext >= params.BTQHeight && nHeightNext < params.BTQHeight + params.BTQPremineWindow)
+    {
     	// Lowest difficulty for BitcoinQuark premining period.
     	return nProofOfWorkLimit;
     }
@@ -74,6 +79,33 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
         bnNew = bnPowLimit;
 
     return bnNew.GetCompact();
+}
+
+bool CheckEquihashSolution(const CBlockHeader *pblock, const CChainParams& params)
+{
+    unsigned int n = params.EquihashN();
+    unsigned int k = params.EquihashK();
+
+    // Hash state
+    crypto_generichash_blake2b_state state;
+    EhInitialiseState(n, k, state);
+
+    // I = the block header minus nonce and solution.
+    CEquihashInput I{*pblock};
+    // I||V
+    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+    ss << I;
+    ss << pblock->nNonce;
+
+    // H(I||V||...
+    crypto_generichash_blake2b_update(&state, (unsigned char*)&ss[0], ss.size());
+
+    bool isValid;
+    EhIsValidSolution(n, k, state, pblock->nSolution, isValid);
+    if (!isValid)
+        return error("CheckEquihashSolution(): invalid solution");
+
+    return true;
 }
 
 bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params& params)
