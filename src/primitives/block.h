@@ -6,10 +6,12 @@
 #ifndef BITCOIN_PRIMITIVES_BLOCK_H
 #define BITCOIN_PRIMITIVES_BLOCK_H
 
+#include "arith_uint256.h"
 #include "primitives/transaction.h"
 #include "serialize.h"
 #include "uint256.h"
 #include "version.h"
+#include <string.h>
 
 namespace Consensus {
     struct Params;
@@ -32,10 +34,11 @@ public:
     int32_t nVersion;
     uint256 hashPrevBlock;
     uint256 hashMerkleRoot;
+    uint32_t nHeight;
+    uint32_t nReserved[7];
     uint32_t nTime;
     uint32_t nBits;
-    uint32_t nNonce;
-    uint32_t nHeight;
+    uint256 nNonce;
     std::vector<unsigned char> nSolution;  // Equihash solution.
 
     CBlockHeader()
@@ -47,16 +50,29 @@ public:
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
+    	bool new_format = !(s.GetVersion() & SERIALIZE_BLOCK_LEGACY);
         READWRITE(this->nVersion);
         READWRITE(hashPrevBlock);
         READWRITE(hashMerkleRoot);
+        if (new_format)
+        {
+			READWRITE(nHeight);
+			for(size_t i = 0; i < (sizeof(nReserved) / sizeof(nReserved[0])); i++)
+			{
+				READWRITE(nReserved[i]);
+			}
+		}
         READWRITE(nTime);
         READWRITE(nBits);
-        READWRITE(nNonce);
-        if (!(s.GetVersion() & SERIALIZE_BLOCK_LEGACY)) {
-            READWRITE(nHeight);
-            READWRITE(nSolution);
-        }
+        if (new_format)
+        {
+			READWRITE(nNonce);
+			READWRITE(nSolution);
+		} else {
+			uint32_t legacy_nonce = (uint32_t)nNonce.GetUint64(0);
+			READWRITE(legacy_nonce);
+			nNonce = ArithToUint256(arith_uint256(legacy_nonce));
+		}
     }
 
     void SetNull()
@@ -64,9 +80,11 @@ public:
         nVersion = 0;
         hashPrevBlock.SetNull();
         hashMerkleRoot.SetNull();
+        nHeight = 0;
+        memset(nReserved, 0, sizeof(nReserved));
         nTime = 0;
         nBits = 0;
-        nNonce = 0;
+        nNonce.SetNull();
         nHeight = 0;
         nSolution.clear();
     }

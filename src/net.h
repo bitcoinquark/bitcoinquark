@@ -586,9 +586,6 @@ public:
 
     void SetVersion(int nVersionIn)
     {
-        // Serialize blocks in legacy way.
-        if (nVersionIn < BTQ_HARD_FORK_VERSION)
-            nVersionIn |= SERIALIZE_BLOCK_LEGACY;
         hdrbuf.SetVersion(nVersionIn);
         vRecv.SetVersion(nVersionIn);
     }
@@ -854,6 +851,8 @@ public:
     std::string GetAddrName() const;
     //! Sets the addrName only if it was not previously set
     void MaybeSetAddrName(const std::string& addrNameIn);
+
+    bool IsLegacyBlockHeader(int version) { return version < BTQ_HARD_FORK_VERSION; };
 };
 
 
