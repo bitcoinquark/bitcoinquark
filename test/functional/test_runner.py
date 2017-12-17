@@ -59,7 +59,7 @@ BASE_SCRIPTS= [
     # vv Tests less than 5m vv
     'p2p-fullblocktest.py',
     'fundrawtransaction.py',
-    'p2p-compactblocks.py',
+    #'p2p-compactblocks.py',
     'segwit.py',
     # vv Tests less than 2m vv
     'wallet.py',
@@ -78,6 +78,7 @@ BASE_SCRIPTS= [
     'bip68-112-113-p2p.py',
     'rawtransactions.py',
     'reindex.py',
+    'btq-hardfork.py',
     # vv Tests less than 30s vv
     'keypool-topup.py',
     'zmq_test.py',
@@ -161,6 +162,7 @@ NON_SCRIPTS = [
     "combine_logs.py",
     "create_cache.py",
     "test_runner.py",
+    "p2p-compactblocks.py",
 ]
 
 def main():

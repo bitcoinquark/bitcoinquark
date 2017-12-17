@@ -102,7 +102,7 @@ unsigned int BitcoinGetNextWorkRequired(const CBlockIndex* pindexLast, const CBl
     unsigned int nProofOfWorkLimit = UintToArith256(params.powLimit).GetCompact();
 
     int nHeightNext = pindexLast->nHeight + 1;
-    int diffAdjustmentInterval = 2016; // every 2016 blocks for Bitcoin
+    int diffAdjustmentInterval = params.DifficultyAdjustmentInterval();
 
     if (nHeightNext % params.DifficultyAdjustmentInterval() != 0)
     {
