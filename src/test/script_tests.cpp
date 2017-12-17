@@ -807,10 +807,10 @@ BOOST_AUTO_TEST_CASE(script_build)
                                ).Num(0).PushSig(keys.key1, SIGHASH_ALL | SIGHASH_FORKID, 33, 32).EditPush(1, "45022100", "440220").Num(0));
     tests.push_back(TestBuilder(CScript() << ToByteVector(keys.pubkey2C) << OP_CHECKSIG,
                                 "P2PK with multi-byte hashtype, without DERSIG", 0
-                               ).PushSig(keys.key2, SIGHASH_ALL | SIGHASH_FORKID).EditPush(70, "01", "0101"));
+                               ).PushSig(keys.key2, SIGHASH_ALL | SIGHASH_FORKID).EditPush(70, "41", "4141"));
     tests.push_back(TestBuilder(CScript() << ToByteVector(keys.pubkey2C) << OP_CHECKSIG,
                                 "P2PK with multi-byte hashtype, with DERSIG", SCRIPT_VERIFY_DERSIG
-                               ).PushSig(keys.key2, SIGHASH_ALL | SIGHASH_FORKID).EditPush(70, "01", "0101").ScriptError(SCRIPT_ERR_SIG_DER));
+                               ).PushSig(keys.key2, SIGHASH_ALL | SIGHASH_FORKID).EditPush(70, "41", "4141").ScriptError(SCRIPT_ERR_SIG_DER));
 
     tests.push_back(TestBuilder(CScript() << ToByteVector(keys.pubkey2C) << OP_CHECKSIG,
                                 "P2PK with high S but no LOW_S", 0
