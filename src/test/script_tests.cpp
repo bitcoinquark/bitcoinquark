@@ -735,16 +735,16 @@ BOOST_AUTO_TEST_CASE(script_build)
 
     tests.push_back(TestBuilder(CScript() << ToByteVector(keys.pubkey1C) << OP_CHECKSIG,
                                 "BIP66 example 1, without DERSIG", 0
-                               ).PushSig(keys.key1, SIGHASH_ALL, 33, 32).EditPush(1, "45022100", "440220"));
+                               ).PushSig(keys.key1, SIGHASH_ALL | SIGHASH_FORKID, 33, 32).EditPush(1, "45022100", "440220"));
     tests.push_back(TestBuilder(CScript() << ToByteVector(keys.pubkey1C) << OP_CHECKSIG,
                                 "BIP66 example 1, with DERSIG", SCRIPT_VERIFY_DERSIG
-                               ).PushSig(keys.key1, SIGHASH_ALL, 33, 32).EditPush(1, "45022100", "440220").ScriptError(SCRIPT_ERR_SIG_DER));
+                               ).PushSig(keys.key1, SIGHASH_ALL | SIGHASH_FORKID, 33, 32).EditPush(1, "45022100", "440220").ScriptError(SCRIPT_ERR_SIG_DER));
     tests.push_back(TestBuilder(CScript() << ToByteVector(keys.pubkey1C) << OP_CHECKSIG << OP_NOT,
                                 "BIP66 example 2, without DERSIG", 0
-                               ).PushSig(keys.key1, SIGHASH_ALL, 33, 32).EditPush(1, "45022100", "440220").ScriptError(SCRIPT_ERR_EVAL_FALSE));
+                               ).PushSig(keys.key1, SIGHASH_ALL | SIGHASH_FORKID, 33, 32).EditPush(1, "45022100", "440220").ScriptError(SCRIPT_ERR_EVAL_FALSE));
     tests.push_back(TestBuilder(CScript() << ToByteVector(keys.pubkey1C) << OP_CHECKSIG << OP_NOT,
                                 "BIP66 example 2, with DERSIG", SCRIPT_VERIFY_DERSIG
-                               ).PushSig(keys.key1, SIGHASH_ALL, 33, 32).EditPush(1, "45022100", "440220").ScriptError(SCRIPT_ERR_SIG_DER));
+                               ).PushSig(keys.key1, SIGHASH_ALL | SIGHASH_FORKID, 33, 32).EditPush(1, "45022100", "440220").ScriptError(SCRIPT_ERR_SIG_DER));
     tests.push_back(TestBuilder(CScript() << ToByteVector(keys.pubkey1C) << OP_CHECKSIG,
                                 "BIP66 example 3, without DERSIG", 0
                                ).Num(0).ScriptError(SCRIPT_ERR_EVAL_FALSE));
