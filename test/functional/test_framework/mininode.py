@@ -542,7 +542,7 @@ class CBlockHeader(object):
             self.nVersion = header.nVersion
             self.hashPrevBlock = header.hashPrevBlock
             self.hashMerkleRoot = header.hashMerkleRoot
-			self.nHeight = header.nHeight
+            self.nHeight = header.nHeight
             self.nReserved = copy.copy(header.nReserved)            
             self.nTime = header.nTime
             self.nBits = header.nBits
@@ -566,51 +566,51 @@ class CBlockHeader(object):
         self.nSolution = b""
 
     def deserialize(self, f, legacy=True):
-    	if legacy:
-	        self.nVersion = struct.unpack("<i", f.read(4))[0]
-	        self.hashPrevBlock = deser_uint256(f)
-	        self.hashMerkleRoot = deser_uint256(f)
-	        self.nTime = struct.unpack("<I", f.read(4))[0]
-	        self.nBits = struct.unpack("<I", f.read(4))[0]
-	        self.nNonce = struct.unpack("<I", f.read(4))[0]
-            self.nHeight = 0
-            self.nReserved = [0] * 7
-            self.nSolution = b""	        
-	    else:
-            self.nVersion = struct.unpack("<i", f.read(4))[0]
-            self.hashPrevBlock = deser_uint256(f)
-            self.hashMerkleRoot = deser_uint256(f)
-            self.nHeight = struct.unpack("<I", f.read(4))
-            self.nReserved = [struct.unpack("<I", f.read(4)) for _ in range(7)]
-            self.nTime = struct.unpack("<I", f.read(4))[0]
-            self.nBits = struct.unpack("<I", f.read(4))[0]
-            self.nNonce = deser_uint256(f)
-            self.nSolution = deser_byte_vector(f)
+        if legacy:
+           self.nVersion = struct.unpack("<i", f.read(4))[0]
+           self.hashPrevBlock = deser_uint256(f)
+           self.hashMerkleRoot = deser_uint256(f)
+           self.nTime = struct.unpack("<I", f.read(4))[0]
+           self.nBits = struct.unpack("<I", f.read(4))[0]
+           self.nNonce = struct.unpack("<I", f.read(4))[0]
+           self.nHeight = 0
+           self.nReserved = [0] * 7
+           self.nSolution = b""	        
+        else:
+           self.nVersion = struct.unpack("<i", f.read(4))[0]
+           self.hashPrevBlock = deser_uint256(f)
+           self.hashMerkleRoot = deser_uint256(f)
+           self.nHeight = struct.unpack("<I", f.read(4))
+           self.nReserved = [struct.unpack("<I", f.read(4)) for _ in range(7)]
+           self.nTime = struct.unpack("<I", f.read(4))[0]
+           self.nBits = struct.unpack("<I", f.read(4))[0]
+           self.nNonce = deser_uint256(f)
+           self.nSolution = deser_byte_vector(f)
         self.sha256 = None
         self.hash = None
 
     def serialize_header(self, legacy=True):
         r = b""
         if legacy:
-	        r += struct.pack("<i", self.nVersion)
-	        r += ser_uint256(self.hashPrevBlock)
-	        r += ser_uint256(self.hashMerkleRoot)
-	        r += struct.pack("<I", self.nTime)
-	        r += struct.pack("<I", self.nBits)
-	        r += struct.pack("<I", self.nNonce & 0xFFFFFFFF)
-	        return r
-		else:
-            r += struct.pack("<i", self.nVersion)
-            r += ser_uint256(self.hashPrevBlock)
-            r += ser_uint256(self.hashMerkleRoot)
-            r += struct.pack("<I", self.nHeight)
-            for _ in range(7):
-                r += struct.pack("<I", self.nReserved[i])
-            r += struct.pack("<I", self.nTime)
-            r += struct.pack("<I", self.nBits)
-            r += ser_uint256(self.nNonce)
-            r += ser_byte_vector(self.nSolution)
-        	return r
+           r += struct.pack("<i", self.nVersion)
+           r += ser_uint256(self.hashPrevBlock)
+           r += ser_uint256(self.hashMerkleRoot)
+           r += struct.pack("<I", self.nTime)
+           r += struct.pack("<I", self.nBits)
+           r += struct.pack("<I", self.nNonce & 0xFFFFFFFF)
+           return r
+        else:
+           r += struct.pack("<i", self.nVersion)
+           r += ser_uint256(self.hashPrevBlock)
+           r += ser_uint256(self.hashMerkleRoot)
+           r += struct.pack("<I", self.nHeight)
+           for _ in range(7):
+             r += struct.pack("<I", self.nReserved[i])
+           r += struct.pack("<I", self.nTime)
+           r += struct.pack("<I", self.nBits)
+           r += ser_uint256(self.nNonce)
+           r += ser_byte_vector(self.nSolution)
+           return r
 
     def serialize(self, legacy=True):
         return self.serialize_header(legacy=legacy)        	
