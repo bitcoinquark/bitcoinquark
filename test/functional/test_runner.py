@@ -78,7 +78,7 @@ BASE_SCRIPTS= [
     'bip68-112-113-p2p.py',
     'rawtransactions.py',
     'reindex.py',
-    'btq-hardfork.py',
+    #'btq-hardfork.py',
     # vv Tests less than 30s vv
     'keypool-topup.py',
     'zmq_test.py',
@@ -163,6 +163,7 @@ NON_SCRIPTS = [
     "create_cache.py",
     "test_runner.py",
     "p2p-compactblocks.py",
+    'btq-hardfork.py',
 ]
 
 def main():

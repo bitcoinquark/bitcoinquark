@@ -21,6 +21,7 @@
     ((CBlockHeader::HEADER_SIZE + equihash_solution_size(N, K))*MAX_HEADERS_RESULTS < \
      MAX_PROTOCOL_MESSAGE_LENGTH-1000)
 
+#include "base58.h"
 #include <assert.h>
 
 #include "chainparamsseeds.h"
@@ -95,7 +96,9 @@ public:
         consensus.BIP66Height = 363725; // 00000000000000000379eaa19dce8c9b722d46ae6a57c2f1a988119488b50931
         consensus.BTQHeight = 520520;
         consensus.BTQPremineWindow = 100;
-        consensus.powLimit = uint256S("00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        consensus.BTQPremineEnforceWhitelist = true;
+        consensus.powLimit = uint256S("0007ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        consensus.powLimitLegacy = uint256S("00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.nPowAveragingWindow = 17;
 		assert(maxUint/UintToArith256(consensus.powLimit) >= consensus.nPowAveragingWindow);
 		consensus.nPowMaxAdjustDown = 32; // 32% adjustment down
@@ -105,7 +108,7 @@ public:
         consensus.fPowAllowMinDifficultyBlocks = false;
         consensus.fPowNoRetargeting = false;
         consensus.nRuleChangeActivationThreshold = 1916; // 95% of 2016
-        consensus.nMinerConfirmationWindow = 2016; // nPowTargetTimespan / nPowTargetSpacing
+        consensus.nMinerConfirmationWindow = 2016; // nPowTargetTimespanLegacy / nPowTargetSpacing
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 1199145601; // January 1, 2008
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = 1230767999; // December 31, 2008
@@ -188,6 +191,10 @@ public:
                         //   (the tx=... number in the SetBestChain debug.log lines)
             3.1         // * estimated number of transactions per second after that timestamp
         };
+
+        vPreminePubkeys = {
+            { "021dd3be6338f1842d1cf52bbcd3d408b4900ff3ecbdda77a7c19b955fcb7dd816", "03541b002b6e5c7eac7e22172475342c1095c8c012079d660ece960a13466be04e", "023372d26eb06f1c22aec0bef30f01020e911c7bf9dfcd1da59a81580de21d467b" }
+        };
     }
 };
 
@@ -205,7 +212,9 @@ public:
         consensus.BIP66Height = 330776; // 000000002104c8c45e99a8853285a3b592602a3ccde2b832481da85e9e4ba182
         consensus.BTQHeight = 100000000; // Not activated yet.
         consensus.BTQPremineWindow = 100;
-        consensus.powLimit = uint256S("00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        consensus.BTQPremineEnforceWhitelist = false;
+        consensus.powLimit = uint256S("0007ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        consensus.powLimitLegacy = uint256S("00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.nPowAveragingWindow = 17;
         assert(maxUint/UintToArith256(consensus.powLimit) >= consensus.nPowAveragingWindow);
         consensus.nPowMaxAdjustDown = 32; // 32% adjustment down
@@ -215,7 +224,7 @@ public:
         consensus.fPowAllowMinDifficultyBlocks = true;
         consensus.fPowNoRetargeting = false;
         consensus.nRuleChangeActivationThreshold = 1512; // 75% for testchains
-        consensus.nMinerConfirmationWindow = 2016; // nPowTargetTimespan / nPowTargetSpacing
+        consensus.nMinerConfirmationWindow = 2016; // nPowTargetTimespanLegacy / nPowTargetSpacing
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 1199145601; // January 1, 2008
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = 1230767999; // December 31, 2008
@@ -298,7 +307,9 @@ public:
         consensus.BIP66Height = 1251; // BIP66 activated on regtest (Used in rpc activation tests)
         consensus.BTQHeight = 1500;
         consensus.BTQPremineWindow = 100;
+        consensus.BTQPremineEnforceWhitelist = false;
         consensus.powLimit = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        consensus.powLimitLegacy = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.nPowAveragingWindow = 17;
         consensus.nPowMaxAdjustDown = 32; // 32% adjustment down
         consensus.nPowMaxAdjustUp = 16; // 16% adjustment up
@@ -391,3 +402,29 @@ void UpdateVersionBitsParameters(Consensus::DeploymentPos d, int64_t nStartTime,
 {
     globalChainParams->UpdateVersionBitsParameters(d, nStartTime, nTimeout);
 }
+
+// Block height must be >=BTQHeight and <BTQHeight + BTQPremineWindow
+// The premine address is expected to be a multisig (P2SH) address
+bool CChainParams::IsPremineAddressScript(const CScript& scriptPubKey, uint32_t height) const {
+
+    assert((uint32_t)consensus.BTQHeight <= height &&
+           height < (uint32_t)(consensus.BTQHeight + consensus.BTQPremineWindow));
+
+    if (!consensus.BTQPremineEnforceWhitelist) {
+        return true;
+    }
+
+    int block = height - consensus.BTQHeight;
+    const std::vector<std::string> pubkeys = vPreminePubkeys[block % vPreminePubkeys.size()];  // Round robin.
+
+    for (const std::string& pubkey : pubkeys) {
+    	std::vector<unsigned char> vec = ParseHex(pubkey.c_str());
+    	CPubKey cpubkey(vec);
+    	CScript target_scriptPubkey = GetScriptForDestination(cpubkey.GetID());
+        if (scriptPubKey == target_scriptPubkey) {
+            return true;
+        }
+	}
+    return false;
+}
+

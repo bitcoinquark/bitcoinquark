@@ -16,11 +16,14 @@
 
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)
 {
-    unsigned int nProofOfWorkLimit = UintToArith256(params.powLimit).GetCompact();
-
+    unsigned int nProofOfWorkLimitLegacy = UintToArith256(params.powLimitLegacy).GetCompact();
     // Genesis block
    if (pindexLast == NULL)
-	   return nProofOfWorkLimit;
+	   return nProofOfWorkLimitLegacy;
+
+   int nHeight = pindexLast->nHeight + 1;
+   bool postfork = nHeight >= params.BTQHeight;
+   unsigned int nProofOfWorkLimit = UintToArith256(params.PowLimit(postfork)).GetCompact();
 
    if (pindexLast->nHeight < params.BTQHeight) {
        return BitcoinGetNextWorkRequired(pindexLast, pblock, params);
@@ -58,7 +61,7 @@ unsigned int CalculateNextWorkRequired(arith_uint256 bnAvg, int64_t nLastBlockTi
         nActualTimespan = params.MaxActualTimespan();
 
     // Retarget
-    const arith_uint256 bnPowLimit = UintToArith256(params.powLimit);
+    const arith_uint256 bnPowLimit = UintToArith256(params.PowLimit(true));
     arith_uint256 bnNew {bnAvg};
     bnNew /= params.AveragingWindowTimespan();
     bnNew *= nActualTimespan;
@@ -99,10 +102,9 @@ bool CheckEquihashSolution(const CBlockHeader *pblock, const CChainParams& param
 unsigned int BitcoinGetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)
 {
     assert(pindexLast != nullptr);
-    unsigned int nProofOfWorkLimit = UintToArith256(params.powLimit).GetCompact();
+    unsigned int nProofOfWorkLimit = UintToArith256(params.PowLimit(false)).GetCompact();
 
     int nHeightNext = pindexLast->nHeight + 1;
-    int diffAdjustmentInterval = params.DifficultyAdjustmentInterval();
 
     if (nHeightNext % params.DifficultyAdjustmentInterval() != 0)
     {
@@ -148,7 +150,7 @@ unsigned int BitcoinCalculateNextWorkRequired(const CBlockIndex* pindexLast, int
         nActualTimespan = params.nPowTargetTimespanLegacy*4;
 
     // Retarget
-    const arith_uint256 bnPowLimit = UintToArith256(params.powLimit);
+    const arith_uint256 bnPowLimit = UintToArith256(params.PowLimit(false));
     arith_uint256 bnNew;
     bnNew.SetCompact(pindexLast->nBits);
     bnNew *= nActualTimespan;
@@ -160,7 +162,7 @@ unsigned int BitcoinCalculateNextWorkRequired(const CBlockIndex* pindexLast, int
     return bnNew.GetCompact();
 }
 
-bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params& params)
+bool CheckProofOfWork(uint256 hash, unsigned int nBits, bool postfork, const Consensus::Params& params)
 {
     bool fNegative;
     bool fOverflow;
@@ -169,7 +171,7 @@ bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params&
     bnTarget.SetCompact(nBits, &fNegative, &fOverflow);
 
     // Check range
-    if (fNegative || bnTarget == 0 || fOverflow || bnTarget > UintToArith256(params.powLimit))
+    if (fNegative || bnTarget == 0 || fOverflow || bnTarget > UintToArith256(params.PowLimit(postfork)))
         return false;
 
     // Check proof of work matches claimed amount

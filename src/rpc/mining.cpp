@@ -137,7 +137,7 @@ UniValue generateBlocks(std::shared_ptr<CReserveScript> coinbaseScript, int nGen
         if (pblock->nHeight < (uint32_t)params.GetConsensus().BTQHeight) {
         	// Bitcoin solve sha256d
             while (nMaxTries > 0 && (int)pblock->nNonce.GetUint64(0) < nInnerLoopCount
-            		&& !CheckProofOfWork(pblock->GetHash(), pblock->nBits, Params().GetConsensus())) {
+            		&& !CheckProofOfWork(pblock->GetHash(), pblock->nBits, false, Params().GetConsensus())) {
             	pblock->nNonce = ArithToUint256(UintToArith256(pblock->nNonce) + 1);
                 --nMaxTries;
             }
@@ -173,7 +173,7 @@ UniValue generateBlocks(std::shared_ptr<CReserveScript> coinbaseScript, int nGen
 					pblock->nSolution = soln;
 					// TODO: Add metrics counter like Zcash? `solutionTargetChecks.increment();`
 					// TODO: Maybe switch to EhBasicSolve and better deal with `nMaxTries`?
-					return CheckProofOfWork(pblock->GetHash(), pblock->nBits, Params().GetConsensus());
+					return CheckProofOfWork(pblock->GetHash(), pblock->nBits, true, Params().GetConsensus());
 				};
 				bool found = EhBasicSolveUncancellable(n, k, curr_state, validBlock);
 				--nMaxTries;
@@ -826,6 +826,40 @@ UniValue submitblock(const JSONRPCRequest& request)
     return BIP22ValidationResult(sc.state);
 }
 
+UniValue getblocksubsidy(const JSONRPCRequest& request)
+{
+  if (request.fHelp || request.params.size() > 1)
+    throw std::runtime_error(
+      "getblocksubsidy height\n"
+      "\nReturns block subsidy reward of block at index provided.\n"
+      "\nArguments:\n"
+      "1. height          (numeric, optional) The block height. If not provided, defaults to the current height of the chain.\n"
+      "\nResult:\n"
+      "{\n"
+      "\"miner\" : n,    (numeric) The mining reward amount in satoshis.\n"
+      "\"founders\": f, (numeric) Always 0, for Zcash mining compatibility.\n"
+      "}\n"
+      "\nExamples:\n"
+      + HelpExampleCli("getblocksubsidy", "1000")
+      + HelpExampleRpc("getblocksubsidy", "1000")
+    );
+
+  RPCTypeCheck(request.params, {UniValue::VNUM});
+
+  LOCK(cs_main);
+  int nHeight = (request.params.size() == 1) ? request.params[0].get_int() : chainActive.Height();
+  if (nHeight < 0)
+	  throw JSONRPCError(RPC_INVALID_PARAMETER, "Block height out of range.");
+
+  UniValue result(UniValue::VOBJ);
+
+  CAmount nReward = GetBlockSubsidy(nHeight, Params().GetConsensus());
+  result.push_back(Pair("miner", nReward));
+  result.push_back(Pair("founders", 0));
+
+  return result;
+}
+
 UniValue estimatefee(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size() != 1)
@@ -1032,6 +1066,7 @@ static const CRPCCommand commands[] =
     { "mining",             "prioritisetransaction",  &prioritisetransaction,  true,  {"txid","dummy","fee_delta"} },
     { "mining",             "getblocktemplate",       &getblocktemplate,       true,  {"template_request"} },
     { "mining",             "submitblock",            &submitblock,            true,  {"hexdata","dummy"} },
+	{ "mining",             "getblocksubsidy",        &getblocksubsidy,        true,  {"height"} },
 
     { "generating",         "generatetoaddress",      &generatetoaddress,      true,  {"nblocks","address","maxtries"} },
 
