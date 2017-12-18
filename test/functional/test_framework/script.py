@@ -852,6 +852,8 @@ def SignatureHash(script, txTo, inIdx, hashtype):
     Returns (hash, err) to precisely match the consensus-critical behavior of
     the SIGHASH_SINGLE bug. (inIdx is *not* checked for validity)
     """
+    assert not (hashtype & SIGHASH_FORKID), "BIP143 is mandatory for FORKID enabled transactions." 
+    
     HASH_ONE = b'\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
 
     if inIdx >= len(txTo.vin):
@@ -889,9 +891,6 @@ def SignatureHash(script, txTo, inIdx, hashtype):
         txtmp.vin = []
         txtmp.vin.append(tmp)
 
-    if hashtype & SIGHASH_FORKID:
-        hashtype |= FORKID_BTQ << 8
-        
     s = txtmp.serialize()
     s += struct.pack(b"<I", hashtype)
 

@@ -636,6 +636,8 @@ void add_replay_tests_mode(std::vector<TestBuilder>& tests, const KeyData& keys,
     tests.push_back(TestBuilder(CScript() << OP_1 << ToByteVector(keys.pubkey1) << ToByteVector(keys.pubkey0C) << OP_2 << OP_CHECKMULTISIG,
                                 "P2SH(P2WSH) CHECKMULTISIG with second key uncompressed and signing with the second key", SCRIPT_VERIFY_WITNESS | SCRIPT_VERIFY_P2SH, true, WITNESS_SH,
                                 0, 1).AddReplayPrefix(REPLAY_ITEM).Push(CScript()).AsWit().PushWitSig(keys.key1).PushWitRedeem().PushRedeem().AddReplayPostfix());
+
+
 }
 } // namespace
 

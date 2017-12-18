@@ -372,21 +372,21 @@ static bool IsCurrentForFeeEstimation()
     return true;
 }
 
-bool static IsBTQHardForkEnabled(const CChainParams& chainParams, int nHeight) {
-    return nHeight >= chainParams.GetConsensus().BTQHeight;
+bool static IsBTQHardForkEnabled(int nHeight, const Consensus::Params& params) {
+    return nHeight >= params.BTQHeight;
 }
 
-bool IsBTQHardForkEnabled(const CChainParams& chainParams, const CBlockIndex *pindexPrev) {
+bool IsBTQHardForkEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& params) {
     if (pindexPrev == nullptr) {
         return false;
     }
 
-    return IsBTQHardForkEnabled(chainParams, pindexPrev->nHeight);
+    return IsBTQHardForkEnabled(pindexPrev->nHeight, params);
 }
 
-bool IsBTQHardForkEnabledForCurrentBlock(const CChainParams& chainParams) {
+bool IsBTQHardForkEnabledForCurrentBlock(const Consensus::Params& params) {
     AssertLockHeld(cs_main);
-    return IsBTQHardForkEnabled(chainParams, chainActive.Tip());
+    return IsBTQHardForkEnabled(chainActive.Tip(),  params);
 }
 
 /* Make mempool consistent after a reorg, by re-adding or recursively erasing
@@ -1658,7 +1658,7 @@ static unsigned int GetBlockScriptFlags(const CBlockIndex* pindex, const Consens
         flags |= SCRIPT_VERIFY_NULLDUMMY;
     }
 
-    if (IsBTQHardForkEnabled(Params(), pindex->pprev)) {
+    if (IsBTQHardForkEnabled(pindex->pprev, consensusparams)) {
         flags |= SCRIPT_VERIFY_STRICTENC;
     } else {
         flags |= SCRIPT_ALLOW_NON_FORKID;
