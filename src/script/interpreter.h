@@ -28,7 +28,7 @@ enum
     SIGHASH_ANYONECANPAY = 0x80,
 };
 
-static const int BTQ_FORKID = 79;
+static const int BTQ_FORKID = 17;
 
 /** Script verification flags */
 enum
