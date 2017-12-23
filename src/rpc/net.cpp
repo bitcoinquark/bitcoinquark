@@ -102,6 +102,7 @@ UniValue getpeerinfo(const JSONRPCRequest& request)
             "       ...\n"
             "    ],\n"
             "    \"whitelisted\": true|false, (boolean) Whether the peer is whitelisted\n"
+        	"    \"quarkmagic\": true|false, (boolean) Whether the peer is use bitcoinquark magic\n"
             "    \"bytessent_per_msg\": {\n"
             "       \"addr\": n,              (numeric) The total bytes sent aggregated by message type\n"
             "       ...\n"
@@ -169,6 +170,7 @@ UniValue getpeerinfo(const JSONRPCRequest& request)
             obj.push_back(Pair("inflight", heights));
         }
         obj.push_back(Pair("whitelisted", stats.fWhitelisted));
+        obj.push_back(Pair("quarkmagic", stats.fUsesQuarkMagic));
 
         UniValue sendPerMsgCmd(UniValue::VOBJ);
         for (const mapMsgCmdSize::value_type &i : stats.mapSendBytesPerMsgCmd) {

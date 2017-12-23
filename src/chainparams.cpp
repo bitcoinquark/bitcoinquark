@@ -98,6 +98,7 @@ public:
         consensus.BTQPremineWindow = 100;
         consensus.BTQPremineEnforceWhitelist = true;
         consensus.powLimit = uint256S("0007ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        consensus.powLimitStart = uint256S("0000000fffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.powLimitLegacy = uint256S("00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.nPowAveragingWindow = 17;
 		assert(maxUint/UintToArith256(consensus.powLimit) >= consensus.nPowAveragingWindow);
@@ -134,11 +135,16 @@ public:
          * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
          * a large 32-bit integer with any alignment.
          */
-        pchMessageStart[0] = 0xf9;
-        pchMessageStart[1] = 0xbe;
-        pchMessageStart[2] = 0xb4;
-        pchMessageStart[3] = 0xd9;
+        pchMessageStartLegacy[0] = 0xf9;
+        pchMessageStartLegacy[1] = 0xbe;
+        pchMessageStartLegacy[2] = 0xb4;
+        pchMessageStartLegacy[3] = 0xd9;
+        pchMessageStart[0] = 0x93;
+        pchMessageStart[1] = 0xe1;
+        pchMessageStart[2] = 0xf3;
+        pchMessageStart[3] = 0x98;
         nDefaultPort = 8339;
+        nBitcoinDefaultPort = 8333;
         nPruneAfterHeight = 100000;
 
         const size_t N = 200, K = 9;
@@ -219,6 +225,7 @@ public:
         consensus.BTQPremineWindow = 100;
         consensus.BTQPremineEnforceWhitelist = false;
         consensus.powLimit = uint256S("0007ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        consensus.powLimitStart = uint256S("0000000fffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.powLimitLegacy = uint256S("00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.nPowAveragingWindow = 17;
         assert(maxUint/UintToArith256(consensus.powLimit) >= consensus.nPowAveragingWindow);
@@ -250,11 +257,16 @@ public:
         // By default assume that the signatures in ancestors of this block are valid.
         consensus.defaultAssumeValid = uint256S("0x0000000002e9e7b00e1f6dc5123a04aad68dd0f0968d8c7aa45f6640795c37b1"); //1135275
 
-        pchMessageStart[0] = 0x0b;
-        pchMessageStart[1] = 0x11;
-        pchMessageStart[2] = 0x09;
-        pchMessageStart[3] = 0x07;
+        pchMessageStartLegacy[0] = 0x0b;
+        pchMessageStartLegacy[1] = 0x11;
+        pchMessageStartLegacy[2] = 0x09;
+        pchMessageStartLegacy[3] = 0x07;
+        pchMessageStart[0] = 0x7b;
+        pchMessageStart[1] = 0xe5;
+        pchMessageStart[2] = 0x73;
+        pchMessageStart[3] = 0x7a;
         nDefaultPort = 18339;
+        nBitcoinDefaultPort = 18333;
         nPruneAfterHeight = 1000;
 
         const size_t N = 200, K = 9;
@@ -319,6 +331,7 @@ public:
         consensus.BTQPremineWindow = 100;
         consensus.BTQPremineEnforceWhitelist = false;
         consensus.powLimit = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        consensus.powLimitStart = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.powLimitLegacy = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.nPowAveragingWindow = 17;
         consensus.nPowMaxAdjustDown = 32; // 32% adjustment down
@@ -345,11 +358,16 @@ public:
         // By default assume that the signatures in ancestors of this block are valid.
         consensus.defaultAssumeValid = uint256S("0x00");
 
-        pchMessageStart[0] = 0xfa;
-        pchMessageStart[1] = 0xbf;
-        pchMessageStart[2] = 0xb5;
-        pchMessageStart[3] = 0xda;
-        nDefaultPort = 18444;
+        pchMessageStartLegacy[0] = 0xfa;
+        pchMessageStartLegacy[1] = 0xbf;
+        pchMessageStartLegacy[2] = 0xb5;
+        pchMessageStartLegacy[3] = 0xda;
+        pchMessageStart[0] = 0xd2;
+        pchMessageStart[1] = 0xb5;
+        pchMessageStart[2] = 0xbf;
+        pchMessageStart[3] = 0xf2;
+        nDefaultPort = 18449;
+        nBitcoinDefaultPort = 18444;
         nPruneAfterHeight = 1000;
 
         const size_t N = 200, K = 9;

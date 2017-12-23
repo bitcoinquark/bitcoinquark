@@ -25,11 +25,14 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
    bool postfork = nHeight >= params.BTQHeight;
    unsigned int nProofOfWorkLimit = UintToArith256(params.PowLimit(postfork)).GetCompact();
 
-   if (pindexLast->nHeight < params.BTQHeight) {
+   if (nHeight < params.BTQHeight) {
        return BitcoinGetNextWorkRequired(pindexLast, pblock, params);
    }
-   else if (pindexLast->nHeight < params.BTQHeight + params.BTQPremineWindow) {
+   else if (nHeight < params.BTQHeight + params.BTQPremineWindow) {
        return nProofOfWorkLimit;
+   }
+   else if(nHeight < params.BTQHeight + params.BTQPremineWindow + params.nPowAveragingWindow) {
+	   return UintToArith256(params.powLimitStart).GetCompact();
    }
 
    const CBlockIndex* pindexFirst = pindexLast;

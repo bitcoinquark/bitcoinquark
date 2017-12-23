@@ -10,6 +10,7 @@
 #include "addrman.h"
 #include "amount.h"
 #include "bloom.h"
+#include "chainparams.h"
 #include "compat.h"
 #include "hash.h"
 #include "limitedmap.h"
@@ -537,6 +538,7 @@ public:
     uint64_t nRecvBytes;
     mapMsgCmdSize mapRecvBytesPerMsgCmd;
     bool fWhitelisted;
+    bool fUsesQuarkMagic;
     double dPingTime;
     double dPingWait;
     double dMinPing;
@@ -713,6 +715,8 @@ public:
     std::atomic<int64_t> nMinPingUsecTime;
     // Whether a ping is requested.
     std::atomic<bool> fPingQueued;
+    // Whether the node uses the BitcoinQuark magic to communicate.
+    std::atomic<bool> fUsesQuarkMagic;
     // Minimum fee rate with which to filter inv's to this node
     CAmount minFeeFilter;
     CCriticalSection cs_feeFilter;
@@ -773,6 +777,12 @@ public:
     }
     void SetSendVersion(int nVersionIn);
     int GetSendVersion() const;
+
+    const CMessageHeader::MessageStartChars &
+    GetMagic(const CChainParams &params) const {
+        return fUsesQuarkMagic ? params.MessageStart()
+                              : params.MessageStartLegacy();
+    }
 
     CService GetAddrLocal() const;
     //! May not be called more than once
