@@ -5,6 +5,7 @@
 #include "test_bitcoin.h"
 
 #include "chainparams.h"
+#include "config.h"
 #include "consensus/consensus.h"
 #include "consensus/validation.h"
 #include "crypto/sha256.h"
@@ -88,7 +89,7 @@ TestingSetup::TestingSetup(const std::string& chainName) : BasicTestingSetup(cha
         }
         {
             CValidationState state;
-            if (!ActivateBestChain(state, chainparams)) {
+            if (!ActivateBestChain(GetConfig(), state, chainparams)) {
                 throw std::runtime_error("ActivateBestChain failed.");
             }
         }
@@ -136,7 +137,7 @@ CBlock
 TestChain100Setup::CreateAndProcessBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey)
 {
     const CChainParams& chainparams = Params();
-    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(chainparams).CreateNewBlock(scriptPubKey);
+    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(GetConfig(), chainparams).CreateNewBlock(scriptPubKey);
     CBlock& block = pblocktemplate->block;
 
     // Replace mempool-selected txns with just coinbase plus passed-in txns:
@@ -153,7 +154,7 @@ TestChain100Setup::CreateAndProcessBlock(const std::vector<CMutableTransaction>&
     }
 
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
-    ProcessNewBlock(chainparams, shared_pblock, true, nullptr);
+    ProcessNewBlock(GetConfig(), chainparams, shared_pblock, true, nullptr);
 
     CBlock result = block;
     return result;

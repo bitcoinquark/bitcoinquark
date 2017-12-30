@@ -5,6 +5,7 @@
 #include "bench.h"
 
 #include "chainparams.h"
+#include "config.h"
 #include "validation.h"
 #include "streams.h"
 #include "consensus/validation.h"
@@ -40,6 +41,7 @@ static void DeserializeAndCheckBlockTest(benchmark::State& state)
     char a = '\0';
     stream.write(&a, 1); // Prevent compaction
 
+    const Config& config = GetConfig();
     const auto chainParams = CreateChainParams(CBaseChainParams::MAIN);
 
     while (state.KeepRunning()) {
@@ -48,7 +50,7 @@ static void DeserializeAndCheckBlockTest(benchmark::State& state)
         assert(stream.Rewind(sizeof(block_bench::block413567)));
 
         CValidationState validationState;
-        assert(CheckBlock(block, validationState, chainParams->GetConsensus()));
+        assert(CheckBlock(config, block, validationState, chainParams->GetConsensus()));
     }
 }
 

@@ -5,6 +5,7 @@
 // Unit tests for denial-of-service detection/prevention code
 
 #include "chainparams.h"
+#include "config.h"
 #include "keystore.h"
 #include "net.h"
 #include "net_processing.h"
@@ -70,18 +71,18 @@ BOOST_AUTO_TEST_CASE(outbound_slow_chain_eviction)
     BOOST_CHECK(chainActive.Tip()->nChainWork > 0);
 
     // Test starts here
-    peerLogic->SendMessages(&dummyNode1, interruptDummy); // should result in getheaders
+    peerLogic->SendMessages(GetConfig(), &dummyNode1, interruptDummy); // should result in getheaders
     BOOST_CHECK(dummyNode1.vSendMsg.size() > 0);
     dummyNode1.vSendMsg.clear();
 
     int64_t nStartTime = GetTime();
     // Wait 21 minutes
     SetMockTime(nStartTime+21*60);
-    peerLogic->SendMessages(&dummyNode1, interruptDummy); // should result in getheaders
+    peerLogic->SendMessages(GetConfig(), &dummyNode1, interruptDummy); // should result in getheaders
     BOOST_CHECK(dummyNode1.vSendMsg.size() > 0);
     // Wait 3 more minutes
     SetMockTime(nStartTime+24*60);
-    peerLogic->SendMessages(&dummyNode1, interruptDummy); // should result in disconnect
+    peerLogic->SendMessages(GetConfig(), &dummyNode1, interruptDummy); // should result in disconnect
     BOOST_CHECK(dummyNode1.fDisconnect == true);
     SetMockTime(0);
 
@@ -184,7 +185,7 @@ BOOST_AUTO_TEST_CASE(DoS_banning)
     dummyNode1.nVersion = 1;
     dummyNode1.fSuccessfullyConnected = true;
     Misbehaving(dummyNode1.GetId(), 100); // Should get banned
-    peerLogic->SendMessages(&dummyNode1, interruptDummy);
+    peerLogic->SendMessages(GetConfig(), &dummyNode1, interruptDummy);
     BOOST_CHECK(connman->IsBanned(addr1));
     BOOST_CHECK(!connman->IsBanned(ip(0xa0b0c001|0x0000ff00))); // Different IP, not banned
 
@@ -195,11 +196,11 @@ BOOST_AUTO_TEST_CASE(DoS_banning)
     dummyNode2.nVersion = 1;
     dummyNode2.fSuccessfullyConnected = true;
     Misbehaving(dummyNode2.GetId(), 50);
-    peerLogic->SendMessages(&dummyNode2, interruptDummy);
+    peerLogic->SendMessages(GetConfig(), &dummyNode2, interruptDummy);
     BOOST_CHECK(!connman->IsBanned(addr2)); // 2 not banned yet...
     BOOST_CHECK(connman->IsBanned(addr1));  // ... but 1 still should be
     Misbehaving(dummyNode2.GetId(), 50);
-    peerLogic->SendMessages(&dummyNode2, interruptDummy);
+    peerLogic->SendMessages(GetConfig(), &dummyNode2, interruptDummy);
     BOOST_CHECK(connman->IsBanned(addr2));
 
     bool dummy;
@@ -220,13 +221,13 @@ BOOST_AUTO_TEST_CASE(DoS_banscore)
     dummyNode1.nVersion = 1;
     dummyNode1.fSuccessfullyConnected = true;
     Misbehaving(dummyNode1.GetId(), 100);
-    peerLogic->SendMessages(&dummyNode1, interruptDummy);
+    peerLogic->SendMessages(GetConfig(), &dummyNode1, interruptDummy);
     BOOST_CHECK(!connman->IsBanned(addr1));
     Misbehaving(dummyNode1.GetId(), 10);
-    peerLogic->SendMessages(&dummyNode1, interruptDummy);
+    peerLogic->SendMessages(GetConfig(), &dummyNode1, interruptDummy);
     BOOST_CHECK(!connman->IsBanned(addr1));
     Misbehaving(dummyNode1.GetId(), 1);
-    peerLogic->SendMessages(&dummyNode1, interruptDummy);
+    peerLogic->SendMessages(GetConfig(), &dummyNode1, interruptDummy);
     BOOST_CHECK(connman->IsBanned(addr1));
     gArgs.ForceSetArg("-banscore", std::to_string(DEFAULT_BANSCORE_THRESHOLD));
 
@@ -250,7 +251,7 @@ BOOST_AUTO_TEST_CASE(DoS_bantime)
     dummyNode.fSuccessfullyConnected = true;
 
     Misbehaving(dummyNode.GetId(), 100);
-    peerLogic->SendMessages(&dummyNode, interruptDummy);
+    peerLogic->SendMessages(GetConfig(), &dummyNode, interruptDummy);
     BOOST_CHECK(connman->IsBanned(addr));
 
     SetMockTime(nStartTime+60*60);

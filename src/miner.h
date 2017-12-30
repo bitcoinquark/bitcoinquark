@@ -16,6 +16,7 @@
 
 class CBlockIndex;
 class CChainParams;
+class Config;
 class CScript;
 
 namespace Consensus { struct Params; };
@@ -139,7 +140,7 @@ private:
 
     // Configuration parameters for the block size
     bool fIncludeWitness;
-    unsigned int nBlockMaxWeight;
+    unsigned int nMaxGeneratedBlockWeight;
     CFeeRate blockMinFeeRate;
 
     // Information on the current status of the block
@@ -154,6 +155,8 @@ private:
     int64_t nLockTimeCutoff;
     const CChainParams& chainparams;
 
+    const Config *config;
+
 public:
     struct Options {
         Options();
@@ -162,11 +165,15 @@ public:
         CFeeRate blockMinFeeRate;
     };
 
-    BlockAssembler(const CChainParams& params);
-    BlockAssembler(const CChainParams& params, const Options& options);
+    BlockAssembler(const Config& _config, const CChainParams& params);
+    BlockAssembler(const Config& _config, const CChainParams& params, const Options& options);
 
     /** Construct a new block template with coinbase to scriptPubKeyIn */
     std::unique_ptr<CBlockTemplate> CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx=true);
+
+    unsigned int GetMaxGeneratedBlockWeight() const {
+        return nMaxGeneratedBlockWeight;
+    }
 
 private:
     // utility functions

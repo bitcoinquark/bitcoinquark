@@ -36,8 +36,9 @@
 #endif
 
 
-class CScheduler;
+class Config;
 class CNode;
+class CScheduler;
 
 namespace boost {
     class thread_group;
@@ -466,8 +467,8 @@ struct CombinerAll
 class NetEventsInterface
 {
 public:
-    virtual bool ProcessMessages(CNode* pnode, std::atomic<bool>& interrupt) = 0;
-    virtual bool SendMessages(CNode* pnode, std::atomic<bool>& interrupt) = 0;
+    virtual bool ProcessMessages(const Config& config, CNode* pnode, std::atomic<bool>& interrupt) = 0;
+    virtual bool SendMessages(const Config& config, CNode* pnode, std::atomic<bool>& interrupt) = 0;
     virtual void InitializeNode(CNode* pnode) = 0;
     virtual void FinalizeNode(NodeId id, bool& update_connection_time) = 0;
 };

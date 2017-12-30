@@ -10,6 +10,8 @@
 #include "validationinterface.h"
 #include "consensus/params.h"
 
+class Config;
+
 /** Default for -maxorphantx, maximum number of orphan transactions kept in memory */
 static const unsigned int DEFAULT_MAX_ORPHAN_TRANSACTIONS = 100;
 /** Expiration time for orphan transactions in seconds */
@@ -51,15 +53,16 @@ public:
     void InitializeNode(CNode* pnode) override;
     void FinalizeNode(NodeId nodeid, bool& fUpdateConnectionTime) override;
     /** Process protocol messages received from a given node */
-    bool ProcessMessages(CNode* pfrom, std::atomic<bool>& interrupt) override;
+    bool ProcessMessages(const Config &config, CNode* pfrom, std::atomic<bool>& interrupt) override;
     /**
     * Send queued protocol messages to be sent to a give node.
     *
+    * @param[in]   config          The global config
     * @param[in]   pto             The node which we are sending messages to.
     * @param[in]   interrupt       Interrupt condition for processing threads
     * @return                      True if there is more work to be done
     */
-    bool SendMessages(CNode* pto, std::atomic<bool>& interrupt) override;
+    bool SendMessages(const Config &config, CNode* pto, std::atomic<bool>& interrupt) override;
 
     void ConsiderEviction(CNode *pto, int64_t time_in_seconds);
     void CheckForStaleTipAndEvictPeers(const Consensus::Params &consensusParams);

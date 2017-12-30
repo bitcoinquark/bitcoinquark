@@ -9,6 +9,7 @@
 #include "chain.h"
 #include "chainparams.h"
 #include "coins.h"
+#include "config.h"
 #include "consensus/consensus.h"
 #include "consensus/tx_verify.h"
 #include "consensus/merkle.h"
@@ -62,14 +63,14 @@ int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParam
 
 BlockAssembler::Options::Options() {
     blockMinFeeRate = CFeeRate(DEFAULT_BLOCK_MIN_TX_FEE);
-    nBlockMaxWeight = DEFAULT_BLOCK_MAX_WEIGHT;
+    nBlockMaxWeight = DEFAULT_MAX_GENERATED_BLOCK_WEIGHT;
 }
 
-BlockAssembler::BlockAssembler(const CChainParams& params, const Options& options) : chainparams(params)
+BlockAssembler::BlockAssembler(const Config& _config, const CChainParams& params, const Options& options) : chainparams(params), config(&_config)
 {
     blockMinFeeRate = options.blockMinFeeRate;
-    // Limit weight to between 4K and MAX_BLOCK_WEIGHT-4K for sanity:
-    nBlockMaxWeight = std::max<size_t>(4000, std::min<size_t>(MAX_BLOCK_WEIGHT - 4000, options.nBlockMaxWeight));
+    // Limit weight to between 4K and nMaxBlockWeight-4K for sanity:
+    nMaxGeneratedBlockWeight = std::max<size_t>(4000, std::min<size_t>(config->GetMaxBlockWeight() - 4000, options.nBlockMaxWeight));
 }
 
 static BlockAssembler::Options DefaultOptions(const CChainParams& params)
@@ -79,7 +80,7 @@ static BlockAssembler::Options DefaultOptions(const CChainParams& params)
     // If only one is given, only restrict the specified resource.
     // If both are given, restrict both.
     BlockAssembler::Options options;
-    options.nBlockMaxWeight = gArgs.GetArg("-blockmaxweight", DEFAULT_BLOCK_MAX_WEIGHT);
+    options.nBlockMaxWeight = gArgs.GetArg("-blockmaxweight", DEFAULT_MAX_GENERATED_BLOCK_WEIGHT);
     if (gArgs.IsArgSet("-blockmintxfee")) {
         CAmount n = 0;
         ParseMoney(gArgs.GetArg("-blockmintxfee", ""), n);
@@ -90,7 +91,7 @@ static BlockAssembler::Options DefaultOptions(const CChainParams& params)
     return options;
 }
 
-BlockAssembler::BlockAssembler(const CChainParams& params) : BlockAssembler(params, DefaultOptions(params)) {}
+BlockAssembler::BlockAssembler(const Config& _config, const CChainParams& params) : BlockAssembler(_config, params, DefaultOptions(params)) {}
 
 void BlockAssembler::resetBlock()
 {
@@ -195,7 +196,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     pblocktemplate->vTxSigOpsCost[0] = WITNESS_SCALE_FACTOR * GetLegacySigOpCount(*pblock->vtx[0]);
 
     CValidationState state;
-    if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false, false)) {
+    if (!TestBlockValidity(*config, state, chainparams, *pblock, pindexPrev, false, false)) {
         throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, FormatStateMessage(state)));
     }
     int64_t nTime2 = GetTimeMicros();
@@ -221,9 +222,10 @@ void BlockAssembler::onlyUnconfirmed(CTxMemPool::setEntries& testSet)
 bool BlockAssembler::TestPackage(uint64_t packageSize, int64_t packageSigOpsCost)
 {
     // TODO: switch to weight-based accounting for packages instead of vsize-based accounting.
-    if (nBlockWeight + WITNESS_SCALE_FACTOR * packageSize >= nBlockMaxWeight)
+	auto blockSizeWithPackage = nBlockWeight + WITNESS_SCALE_FACTOR * packageSize;
+    if (blockSizeWithPackage >= nMaxGeneratedBlockWeight)
         return false;
-    if (nBlockSigOpsCost + packageSigOpsCost >= MAX_BLOCK_SIGOPS_COST)
+    if (nBlockSigOpsCost + packageSigOpsCost >= GetMaxBlockSigOpsCount(blockSizeWithPackage) * WITNESS_SCALE_FACTOR)
         return false;
     return true;
 }
@@ -411,7 +413,7 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
             ++nConsecutiveFailed;
 
             if (nConsecutiveFailed > MAX_CONSECUTIVE_FAILURES && nBlockWeight >
-                    nBlockMaxWeight - 4000) {
+    				nMaxGeneratedBlockWeight - 4000) {
                 // Give up if we're close to full and haven't succeeded in a while
                 break;
             }

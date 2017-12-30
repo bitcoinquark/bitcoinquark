@@ -629,7 +629,7 @@ class FullBlockTest(ComparisonTestFramework):
         self.block_heights[b44.sha256] = height
         self.blocks[44] = b44
         yield accepted()
-
+        
         # A block with a non-coinbase as the first tx
         non_coinbase = create_tx(out[15].tx, out[15].n, 1)
         b45 = CBlock()
@@ -644,7 +644,7 @@ class FullBlockTest(ComparisonTestFramework):
         self.tip = b45
         self.blocks[45] = b45
         yield rejected(RejectResult(16, b'bad-cb-missing'))
-
+                
         # A block with no txns
         tip(44)
         b46 = CBlock()
@@ -658,9 +658,11 @@ class FullBlockTest(ComparisonTestFramework):
         self.tip = b46
         assert 46 not in self.blocks
         self.blocks[46] = b46
-        s = ser_uint256(b46.hashMerkleRoot)
-        yield rejected(RejectResult(16, b'bad-blk-length'))
-
+        s = ser_uint256(b46.hashMerkleRoot)     
+        yield rejected(RejectResult(16, b'bad-cb-missing'))
+        
+        print (b"A block with invalid work")
+        
         # A block with invalid work
         tip(44)
         b47 = block(47, solve=False)

@@ -10,6 +10,7 @@
 #include "chainparams.h"
 #include "clientversion.h"
 #include "compat.h"
+#include "config.h"
 #include "fs.h"
 #include "rpc/server.h"
 #include "init.h"
@@ -64,6 +65,8 @@ bool AppInit(int argc, char* argv[])
 {
     boost::thread_group threadGroup;
     CScheduler scheduler;
+
+    auto &config = const_cast<Config &>(GetConfig());
 
     bool fRet = false;
 
@@ -165,7 +168,7 @@ bool AppInit(int argc, char* argv[])
             // If locking the data directory failed, exit immediately
             exit(EXIT_FAILURE);
         }
-        fRet = AppInitMain(threadGroup, scheduler);
+        fRet = AppInitMain(config, threadGroup, scheduler);
     }
     catch (const std::exception& e) {
         PrintExceptionContinue(&e, "AppInit()");

@@ -10,6 +10,7 @@
 
 #include "chainparams.h"
 #include "clientmodel.h"
+#include "config.h"
 #include "fs.h"
 #include "guiconstants.h"
 #include "guiutil.h"
@@ -300,7 +301,10 @@ void BitcoinCore::initialize()
     try
     {
         qDebug() << __func__ << ": Running initialization in thread";
-        bool rv = AppInitMain(threadGroup, scheduler);
+
+        auto &config = const_cast<Config &>(GetConfig());
+
+        bool rv = AppInitMain(config, threadGroup, scheduler);
         Q_EMIT initializeResult(rv);
     } catch (const std::exception& e) {
         handleRunawayException(&e);
