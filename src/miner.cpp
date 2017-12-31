@@ -66,11 +66,24 @@ BlockAssembler::Options::Options() {
     nBlockMaxWeight = DEFAULT_MAX_GENERATED_BLOCK_WEIGHT;
 }
 
+static unsigned int ComputeMaxGeneratedBlockWeight(const Config& config, const CBlockIndex* pindexPrev, const BlockAssembler::Options& options) {
+
+	// Limit weight to between 4K and nMaxBlockWeight-4K for sanity:
+	size_t nMaxGeneratedBlockWeight = std::max<size_t>(4000, std::min<size_t>(config.GetMaxBlockWeight() - 4000, options.nBlockMaxWeight));
+
+    // If BTQ is not forked yet, limit the max generated block weight to (LEGACY_MAX_BLOCK_SIZE - 1000) * WITNESS_SCALE_FACTOR
+    if(!IsBTQHardForkEnabled(pindexPrev, config.GetChainParams().GetConsensus())) {
+    	nMaxGeneratedBlockWeight = std::max<size_t>(4000, std::min<size_t>(LEGACY_MAX_BLOCK_SIZE * WITNESS_SCALE_FACTOR  - 4000, options.nBlockMaxWeight));
+    }
+
+    return nMaxGeneratedBlockWeight;
+}
+
 BlockAssembler::BlockAssembler(const Config& _config, const CChainParams& params, const Options& options) : chainparams(params), config(&_config)
 {
     blockMinFeeRate = options.blockMinFeeRate;
-    // Limit weight to between 4K and nMaxBlockWeight-4K for sanity:
-    nMaxGeneratedBlockWeight = std::max<size_t>(4000, std::min<size_t>(config->GetMaxBlockWeight() - 4000, options.nBlockMaxWeight));
+    LOCK(cs_main);
+    nMaxGeneratedBlockWeight = ComputeMaxGeneratedBlockWeight(*config, chainActive.Tip(), options);
 }
 
 static BlockAssembler::Options DefaultOptions(const CChainParams& params)
@@ -136,6 +149,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     pblock->nTime = GetAdjustedTime();
     const int64_t nMedianTimePast = pindexPrev->GetMedianTimePast();
+    nMaxGeneratedBlockWeight = ComputeMaxGeneratedBlockWeight(*config, pindexPrev, DefaultOptions(chainparams));
 
     nLockTimeCutoff = (STANDARD_LOCKTIME_VERIFY_FLAGS & LOCKTIME_MEDIAN_TIME_PAST)
                        ? nMedianTimePast

@@ -290,7 +290,7 @@ bool CBlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, 
                 pindexNew->nStatus        = diskindex.nStatus;
                 pindexNew->nTx            = diskindex.nTx;
 
-                bool postfork = pindexNew->nHeight >= (uint32_t)consensusParams.BTQHeight;
+                bool postfork = pindexNew->nHeight >= consensusParams.BTQHeight;
                 if (!CheckProofOfWork(pindexNew->GetBlockHash(), pindexNew->nBits, postfork, consensusParams))
                     return error("%s: CheckProofOfWork failed: %s", __func__, pindexNew->ToString());
 

@@ -1796,9 +1796,9 @@ static bool ConnectBlock(const Config& config, const CBlock& block, CValidationS
     CAmount nFees = 0;
     int nInputs = 0;
     int64_t nSigOpsCost = 0;
-    auto currentBlockSize =
+    const uint64_t currentBlockSize =
         ::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION);
-    auto nMaxSigOpsCount = GetMaxBlockSigOpsCount(currentBlockSize);
+    const uint64_t nMaxSigOpsCount = GetMaxBlockSigOpsCount(currentBlockSize);
     CDiskTxPos pos(pindex->GetBlockPos(), GetSizeOfCompactSize(block.vtx.size()));
     std::vector<std::pair<uint256, CDiskTxPos> > vPos;
     vPos.reserve(block.vtx.size());
@@ -1835,8 +1835,13 @@ static bool ConnectBlock(const Config& config, const CBlock& block, CValidationS
         // * legacy (always)
         // * p2sh (when P2SH enabled in flags and excludes coinbase)
         // * witness (when witness enabled in flags and excludes coinbase)
-        nSigOpsCost += GetTransactionSigOpCost(tx, view, flags);
-        if (nSigOpsCost > nMaxSigOpsCount * WITNESS_SCALE_FACTOR)
+        auto txSigOpsCost = GetTransactionSigOpCost(tx, view, flags);
+        if(txSigOpsCost > MAX_BLOCK_SIGOPS_COST) {
+        	return state.DoS(100, false, REJECT_INVALID, "bad-txn-sigops");
+        }
+
+        nSigOpsCost += txSigOpsCost;
+        if (nSigOpsCost > nMaxSigOpsCount * (int64_t)WITNESS_SCALE_FACTOR)
         {
             return state.DoS(100, error("ConnectBlock(): too many sigops"),
                              REJECT_INVALID, "bad-blk-sigops");
@@ -3078,6 +3083,15 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
         if (block.vtx[0]->vin[0].scriptSig.size() < expect.size() ||
             !std::equal(expect.begin(), expect.end(), block.vtx[0]->vin[0].scriptSig.begin())) {
             return state.DoS(100, false, REJECT_INVALID, "bad-cb-height", false, "block height mismatch in coinbase");
+        }
+    }
+
+    if(nHeight < consensusParams.BTQHeight) {
+        int serialization_flag = (block.nHeight < (uint32_t)consensusParams.BTQHeight) ? SERIALIZE_BLOCK_LEGACY : 0;
+        auto currentBlockSize = ::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION | serialization_flag | SERIALIZE_TRANSACTION_NO_WITNESS);
+        if (currentBlockSize > LEGACY_MAX_BLOCK_SIZE) {
+            return state.DoS(100, false, REJECT_INVALID, "bad-blk-length", false,
+                             "size limits failed");
         }
     }
 

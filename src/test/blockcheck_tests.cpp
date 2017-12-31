@@ -46,6 +46,10 @@ BOOST_AUTO_TEST_CASE(blockfail) {
     SelectParams(CBaseChainParams::MAIN);
     const Consensus::Params &params = Params().GetConsensus();
 
+    // Set max blocksize to default in case other tests left it dirty
+    GlobalConfig config;
+    config.SetMaxBlockWeight(MAX_BLOCK_WEIGHT);
+
     CBlock block;
     RunCheckOnBlock(block, params, "bad-cb-missing");
 

@@ -16,6 +16,7 @@ import time
 from test_framework.mininode import *
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import *
+from test_framework.cdefs import LEGACY_MAX_BLOCK_SIZE
 
 class TestNode(NodeConnCB):
     def __init__(self):

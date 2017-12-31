@@ -11,17 +11,19 @@
 
 /** 1MB */
 static const uint64_t ONE_MEGABYTE = 1000000;
-static const int SCALE_FACTOR = 1;
+
 /** The maximum allowed size for a transaction, in bytes */
-static const uint64_t MAX_TX_SIZE = SCALE_FACTOR * ONE_MEGABYTE;
+static const uint64_t MAX_TX_SIZE = ONE_MEGABYTE;
+/** The maximum allowed size for a block, before the fork */
+static const uint64_t LEGACY_MAX_BLOCK_SIZE = ONE_MEGABYTE;
 /** Default setting for maximum allowed size for a block, in bytes */
-static const unsigned int DEFAULT_MAX_BLOCK_SIZE = MAX_TX_SIZE;
+static const unsigned int DEFAULT_MAX_BLOCK_SIZE = ONE_MEGABYTE;
 /** The maximum allowed number of signature check operations per MB in a block
  * (network rule) */
 static const int64_t MAX_BLOCK_SIGOPS_PER_MB = 20000;
 /** The maximum allowed number of signature check operations in a block (network
  * rule) */
-static const int64_t MAX_BLOCK_SIGOPS = SCALE_FACTOR * MAX_BLOCK_SIGOPS_PER_MB;
+static const int64_t MAX_BLOCK_SIGOPS = MAX_BLOCK_SIGOPS_PER_MB;
 
 
 static const int WITNESS_SCALE_FACTOR = 4;

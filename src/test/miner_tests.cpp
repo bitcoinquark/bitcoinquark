@@ -515,21 +515,97 @@ void CheckBlockMaxWeight(const CChainParams &chainparams, uint64_t weight,
     gArgs.ForceSetArg("-blockmaxweight", std::to_string(weight));
 
     BlockAssembler ba(config, chainparams);
+
     BOOST_CHECK_EQUAL(ba.GetMaxGeneratedBlockWeight(), expected);
 }
 
 BOOST_AUTO_TEST_CASE(BlockAssembler_construction) {
 
 	GlobalConfig config;
-	config.SetMaxBlockWeight(MAX_BLOCK_WEIGHT);
+	const CChainParams &chainparams = Params();
 
-    const auto chainParams = CreateChainParams(CBaseChainParams::MAIN);
-	const CChainParams& chainparams = *chainParams;
+	// The maximum block weight to be generated before the BTQ forked
+	static const auto LEGACY_CAP = LEGACY_MAX_BLOCK_SIZE * WITNESS_SCALE_FACTOR - 4000;
+
+	LOCK(cs_main);
+
+	// Check before BTQ forked.
+	BOOST_CHECK(!IsBTQHardForkEnabled(chainActive.Tip(), chainparams.GetConsensus()));
+
+	static const auto ONE_MEGABYTES_WEIGHT = 1 * ONE_MEGABYTE * WITNESS_SCALE_FACTOR;
+
+	// Test around the historical 1MB cap
+    config.SetMaxBlockWeight(ONE_MEGABYTES_WEIGHT);
     CheckBlockMaxWeight(chainparams, 0, 4000);
     CheckBlockMaxWeight(chainparams, 4000, 4000);
     CheckBlockMaxWeight(chainparams, 4001, 4001);
-
     CheckBlockMaxWeight(chainparams, 12345, 12345);
+
+    CheckBlockMaxWeight(chainparams, ONE_MEGABYTES_WEIGHT - 4001,
+    		ONE_MEGABYTES_WEIGHT - 4001);
+    CheckBlockMaxWeight(chainparams, ONE_MEGABYTES_WEIGHT - 4000,
+    		ONE_MEGABYTES_WEIGHT - 4000);
+    CheckBlockMaxWeight(chainparams, ONE_MEGABYTES_WEIGHT - 3999,
+    		LEGACY_CAP);
+    CheckBlockMaxWeight(chainparams, ONE_MEGABYTES_WEIGHT,
+    		LEGACY_CAP);
+
+	// Test around higher limit, the block size should still cap at LEGACY_CAP.
+	static const auto EIGHT_MEGABYTES_WEIGHT = 8 * ONE_MEGABYTE * WITNESS_SCALE_FACTOR;
+	config.SetMaxBlockWeight(EIGHT_MEGABYTES_WEIGHT);
+	CheckBlockMaxWeight(chainparams, EIGHT_MEGABYTES_WEIGHT - 4001, LEGACY_CAP);
+	CheckBlockMaxWeight(chainparams, EIGHT_MEGABYTES_WEIGHT - 4000, LEGACY_CAP);
+	CheckBlockMaxWeight(chainparams, EIGHT_MEGABYTES_WEIGHT - 3999, LEGACY_CAP);
+	CheckBlockMaxWeight(chainparams, EIGHT_MEGABYTES_WEIGHT, LEGACY_CAP);
+
+	// If the parameter is not specified, we use
+	// DEFAULT_MAX_GENERATED_BLOCK_WEIGHT
+	{
+		gArgs.ClearArg("-blockmaxweight");
+		BlockAssembler ba(config, chainparams);
+		BOOST_CHECK_EQUAL(ba.GetMaxGeneratedBlockWeight(),
+				DEFAULT_MAX_GENERATED_BLOCK_WEIGHT);
+	}
+
+    // After BTQ forked
+    const int64_t btqHeight = config.GetChainParams().GetConsensus().BTQHeight;
+    auto pindex = chainActive.Tip();
+    for (size_t i = 0; pindex && i < 5; i++) {
+    	pindex->nHeight = btqHeight + 5 - i;
+        pindex = pindex->pprev;
+    }
+
+    BOOST_CHECK(IsBTQHardForkEnabled(chainActive.Tip(), chainparams.GetConsensus()));
+
+
+    // Test around historical 1MB
+    config.SetMaxBlockWeight(ONE_MEGABYTES_WEIGHT);
+    CheckBlockMaxWeight(chainparams, 0, 4000);
+    CheckBlockMaxWeight(chainparams, 4000, 4000);
+    CheckBlockMaxWeight(chainparams, 4001, 4001);
+    CheckBlockMaxWeight(chainparams, 12345, 12345);
+
+    CheckBlockMaxWeight(chainparams, ONE_MEGABYTES_WEIGHT - 4001,
+    		ONE_MEGABYTES_WEIGHT - 4001);
+    CheckBlockMaxWeight(chainparams, ONE_MEGABYTES_WEIGHT - 4000,
+    		ONE_MEGABYTES_WEIGHT - 4000);
+    CheckBlockMaxWeight(chainparams, ONE_MEGABYTES_WEIGHT - 3999,
+    		ONE_MEGABYTES_WEIGHT - 4000);
+    CheckBlockMaxWeight(chainparams, ONE_MEGABYTES_WEIGHT,
+    		ONE_MEGABYTES_WEIGHT - 4000);
+
+	config.SetMaxBlockWeight(EIGHT_MEGABYTES_WEIGHT);
+    CheckBlockMaxWeight(chainparams, EIGHT_MEGABYTES_WEIGHT - 4001,
+    		EIGHT_MEGABYTES_WEIGHT - 4001);
+    CheckBlockMaxWeight(chainparams, EIGHT_MEGABYTES_WEIGHT - 4000,
+    		EIGHT_MEGABYTES_WEIGHT - 4000);
+    CheckBlockMaxWeight(chainparams, EIGHT_MEGABYTES_WEIGHT - 3999,
+    		EIGHT_MEGABYTES_WEIGHT - 4000);
+    CheckBlockMaxWeight(chainparams, EIGHT_MEGABYTES_WEIGHT,
+    		EIGHT_MEGABYTES_WEIGHT - 4000);
+
+    // Test around default cap
+    config.SetMaxBlockWeight(MAX_BLOCK_WEIGHT);
     CheckBlockMaxWeight(chainparams, MAX_BLOCK_WEIGHT - 4001,
     		MAX_BLOCK_WEIGHT - 4001);
     CheckBlockMaxWeight(chainparams, MAX_BLOCK_WEIGHT - 4000,

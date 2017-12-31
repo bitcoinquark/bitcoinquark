@@ -182,7 +182,7 @@ public:
     /** Basic initialization, before starting initialization/shutdown thread.
      * Return true on success.
      */
-    static bool baseInitialize();
+    static bool baseInitialize(Config& config);
 
 public Q_SLOTS:
     void initialize();
@@ -275,13 +275,13 @@ void BitcoinCore::handleRunawayException(const std::exception *e)
     Q_EMIT runawayException(QString::fromStdString(GetWarnings("gui")));
 }
 
-bool BitcoinCore::baseInitialize()
+bool BitcoinCore::baseInitialize(Config& config)
 {
     if (!AppInitBasicSetup())
     {
         return false;
     }
-    if (!AppInitParameterInteraction())
+    if (!AppInitParameterInteraction(config))
     {
         return false;
     }
@@ -700,6 +700,9 @@ int main(int argc, char *argv[])
     // Subscribe to global signals from core
     uiInterface.InitMessage.connect(InitMessage);
 
+    // Get global config
+    Config &config = const_cast<Config &>(GetConfig());
+
     if (gArgs.GetBoolArg("-splash", DEFAULT_SPLASHSCREEN) && !gArgs.GetBoolArg("-min", false))
         app.createSplashScreen(networkStyle.data());
 
@@ -710,7 +713,7 @@ int main(int argc, char *argv[])
         // Perform base initialization before spinning up initialization/shutdown thread
         // This is acceptable because this function only contains steps that are quick to execute,
         // so the GUI thread won't be held up.
-        if (BitcoinCore::baseInitialize()) {
+        if (BitcoinCore::baseInitialize(config)) {
             app.requestInitialize();
 #if defined(Q_OS_WIN) && QT_VERSION >= 0x050000
             WinShutdownMonitor::registerShutdownBlockReason(QObject::tr("%1 didn't yet exit safely...").arg(QObject::tr(PACKAGE_NAME)), (HWND)app.getMainWinId());

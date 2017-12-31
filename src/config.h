@@ -9,16 +9,20 @@
 
 #include <cstdint>
 
+class CChainParams;
+
 class Config : public boost::noncopyable {
 public:
     virtual bool SetMaxBlockWeight(uint64_t maxBlockWeight) = 0;
     virtual uint64_t GetMaxBlockWeight() const = 0;
+    virtual const CChainParams &GetChainParams() const = 0;
 };
 
 class GlobalConfig final : public Config {
 public:
     bool SetMaxBlockWeight(uint64_t maxBlockWeight);
     uint64_t GetMaxBlockWeight() const;
+    const CChainParams &GetChainParams() const;
 };
 
 // Temporary woraround.

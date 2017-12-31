@@ -410,6 +410,9 @@ bool TestBlockValidity(const Config& config, CValidationState& state, const CCha
 /** Check whether witness commitments are required for block. */
 bool IsWitnessEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& params);
 
+/** Check whether BTQ hard fork enabled. */
+bool IsBTQHardForkEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& params);
+
 /** When there are blocks in the active chain with missing data, rewind the chainstate and remove them from the block index */
 bool RewindBlockIndex(const CChainParams& params);
 

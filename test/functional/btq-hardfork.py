@@ -2,7 +2,7 @@
 # Copyright (c) 2014-2016 The Bitcoin Quark developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
-"""Test cases for Bitcoin Gold fork """
+"""Test cases for Bitcoin Quark fork """
 
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import *

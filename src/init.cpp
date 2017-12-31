@@ -15,6 +15,7 @@
 #include "chainparams.h"
 #include "checkpoints.h"
 #include "compat/sanity.h"
+#include "config.h"
 #include "consensus/validation.h"
 #include "fs.h"
 #include "httpserver.h"
@@ -488,6 +489,7 @@ std::string HelpMessage(HelpMessageMode mode)
     strUsage += HelpMessageGroup(_("Node relay options:"));
     if (showDebug) {
         strUsage += HelpMessageOpt("-acceptnonstdtxn", strprintf("Relay and mine \"non-standard\" transactions (%sdefault: %u)", "testnet/regtest only; ", defaultChainParams->RequireStandard()));
+        strUsage += HelpMessageOpt("-excessiveblocksize=<n>", strprintf(_("Do not accept blocks larger than this ""limit, in bytes (default: %d)"), DEFAULT_MAX_BLOCK_SIZE));
         strUsage += HelpMessageOpt("-incrementalrelayfee=<amt>", strprintf("Fee rate (in %s/kB) used to define cost of relay, used for mempool limiting and BIP 125 replacement. (default: %s)", CURRENCY_UNIT, FormatMoney(DEFAULT_INCREMENTAL_RELAY_FEE)));
         strUsage += HelpMessageOpt("-dustrelayfee=<amt>", strprintf("Fee rate (in %s/kB) used to defined dust, the value of an output such that it will cost more than its value in fees at this fee rate to spend it. (default: %s)", CURRENCY_UNIT, FormatMoney(DUST_RELAY_TX_FEE)));
     }
@@ -902,7 +904,7 @@ bool AppInitBasicSetup()
     return true;
 }
 
-bool AppInitParameterInteraction()
+bool AppInitParameterInteraction(Config& config)
 {
     const CChainParams& chainparams = Params();
     // ********************************************************* Step 2: parameter interactions
@@ -1033,6 +1035,30 @@ bool AppInitParameterInteraction()
         nScriptCheckThreads = 0;
     else if (nScriptCheckThreads > MAX_SCRIPTCHECK_THREADS)
         nScriptCheckThreads = MAX_SCRIPTCHECK_THREADS;
+
+    // Configure excessive block size.
+    const auto nProposedExcessiveBlockSize =
+    		gArgs.GetArg("-excessiveblocksize", DEFAULT_MAX_BLOCK_SIZE);
+    if (nProposedExcessiveBlockSize < ONE_MEGABYTE) {
+        return InitError(
+            _("Excessive block size must be >= 1,000,000 bytes (1MB)"));
+    } else {
+        if (!config.SetMaxBlockWeight(nProposedExcessiveBlockSize * WITNESS_SCALE_FACTOR)) {
+            return InitError(strprintf(
+                _("Unable to validate excessive block size value (%d)"),
+                nProposedExcessiveBlockSize));
+        }
+        assert(nProposedExcessiveBlockSize * (uint64_t)WITNESS_SCALE_FACTOR == config.GetMaxBlockWeight());
+    }
+
+    // Check blockmaxsize does not exceed maximum accepted block size.
+    const auto nProposedMaxGeneratedBlockSize =
+    		gArgs.GetArg("-blockmaxsize", DEFAULT_MAX_GENERATED_BLOCK_WEIGHT / WITNESS_SCALE_FACTOR);
+    if (nProposedMaxGeneratedBlockSize * (uint64_t)WITNESS_SCALE_FACTOR > config.GetMaxBlockWeight()) {
+        return InitError(
+            _("Max generated block size (blockmaxsize) cannot exceed the "
+              "excessive block size (excessiveblocksize)"));
+    }
 
     // block pruning; get the amount of disk space (in MiB) to allot for block & undo files
     int64_t nPruneArg = gArgs.GetArg("-prune", 0);

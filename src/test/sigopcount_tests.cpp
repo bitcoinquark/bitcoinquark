@@ -2,6 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "consensus/consensus.h"
 #include "consensus/tx_verify.h"
 #include "consensus/validation.h"
 #include "pubkey.h"
@@ -11,6 +12,7 @@
 #include "uint256.h"
 #include "test/test_bitcoin.h"
 
+#include <limits>
 #include <vector>
 
 #include <boost/test/unit_test.hpp>
@@ -228,5 +230,25 @@ BOOST_AUTO_TEST_CASE(GetTxSigOpCost)
         assert(VerifyWithFlag(creationTx, spendingTx, flags) == SCRIPT_ERR_CHECKMULTISIGVERIFY);
     }
 }
+
+BOOST_AUTO_TEST_CASE(test_consensus_sigops_limit) {
+    BOOST_CHECK_EQUAL(GetMaxBlockSigOpsCount(1), MAX_BLOCK_SIGOPS_PER_MB);
+    BOOST_CHECK_EQUAL(GetMaxBlockSigOpsCount(123456), MAX_BLOCK_SIGOPS_PER_MB);
+    BOOST_CHECK_EQUAL(GetMaxBlockSigOpsCount(1000000), MAX_BLOCK_SIGOPS_PER_MB);
+    BOOST_CHECK_EQUAL(GetMaxBlockSigOpsCount(1000001),
+                      2 * MAX_BLOCK_SIGOPS_PER_MB);
+    BOOST_CHECK_EQUAL(GetMaxBlockSigOpsCount(1348592),
+                      2 * MAX_BLOCK_SIGOPS_PER_MB);
+    BOOST_CHECK_EQUAL(GetMaxBlockSigOpsCount(2000000),
+                      2 * MAX_BLOCK_SIGOPS_PER_MB);
+    BOOST_CHECK_EQUAL(GetMaxBlockSigOpsCount(2000001),
+                      3 * MAX_BLOCK_SIGOPS_PER_MB);
+    BOOST_CHECK_EQUAL(GetMaxBlockSigOpsCount(2654321),
+                      3 * MAX_BLOCK_SIGOPS_PER_MB);
+    BOOST_CHECK_EQUAL(
+        GetMaxBlockSigOpsCount(std::numeric_limits<uint32_t>::max()),
+        4295 * MAX_BLOCK_SIGOPS_PER_MB);
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
