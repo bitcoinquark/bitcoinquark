@@ -93,6 +93,11 @@ BOOST_AUTO_TEST_CASE(blockfail) {
         RunCheckOnBlock(block, params);
     }
 
+    // Check that at this point, we still accept the block.
+    RunCheckOnBlock(block, params);
+
+    // But reject it with one more transaction as it goes over the maximum
+    // allowed block size.
     tx.vin[0].prevout.hash = GetRandHash();
     block.vtx.push_back(MakeTransactionRef(tx));
     RunCheckOnBlock(block, params, "bad-blk-length");

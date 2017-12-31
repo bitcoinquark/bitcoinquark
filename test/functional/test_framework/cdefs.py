@@ -18,21 +18,27 @@ _consensus_h_fh.close()
 # This constant is currently needed to evaluate some that are formulas
 ONE_MEGABYTE = 1000000
 
+SCALE_FACTOR = 2
+
 # The maximum allowed block size before the fork
 LEGACY_MAX_BLOCK_SIZE = ONE_MEGABYTE
 
 # Default setting for maximum allowed size for a block, in bytes
-DEFAULT_MAX_BLOCK_SIZE = 2 * ONE_MEGABYTE
+DEFAULT_MAX_BLOCK_SIZE = SCALE_FACTOR * ONE_MEGABYTE
+
+WITNESS_SCALE_FACTOR = 4
 
 # The following consensus parameters should not be automatically imported.
 # They *should* cause test failures if application code is changed in ways
 # that violate current consensus.
 
-
-
 # The maximum allowed number of signature check operations per MB in a block
 # (network rule) 
 MAX_BLOCK_SIGOPS_PER_MB = 20000
+
+MAX_BLOCK_SIGOPS = SCALE_FACTOR * MAX_BLOCK_SIGOPS_PER_MB
+
+MAX_BLOCK_WEIGHT = WITNESS_SCALE_FACTOR * DEFAULT_MAX_BLOCK_SIZE
 
 # Allowed number of signature check operations per transaction
 MAX_TX_SIGOPS_COUNT = 20000

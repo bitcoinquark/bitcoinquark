@@ -559,12 +559,12 @@ BOOST_AUTO_TEST_CASE(BlockAssembler_construction) {
 	CheckBlockMaxWeight(chainparams, EIGHT_MEGABYTES_WEIGHT, LEGACY_CAP);
 
 	// If the parameter is not specified, we use
-	// DEFAULT_MAX_GENERATED_BLOCK_WEIGHT
+	// LEGACY_CAP
 	{
 		gArgs.ClearArg("-blockmaxweight");
 		BlockAssembler ba(config, chainparams);
 		BOOST_CHECK_EQUAL(ba.GetMaxGeneratedBlockWeight(),
-				DEFAULT_MAX_GENERATED_BLOCK_WEIGHT);
+				LEGACY_CAP);
 	}
 
     // After BTQ forked

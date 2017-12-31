@@ -5,6 +5,7 @@
 """Test the SegWit changeover logic."""
 
 from test_framework.test_framework import BitcoinTestFramework
+from test_framework.cdefs import DEFAULT_MAX_BLOCK_SIZE, LEGACY_MAX_BLOCK_SIZE, MAX_BLOCK_SIGOPS_PER_MB, WITNESS_SCALE_FACTOR, MAX_BLOCK_SIGOPS, MAX_BLOCK_WEIGHT
 from test_framework.util import *
 from test_framework.mininode import sha256, CTransaction, CTxIn, COutPoint, CTxOut, COIN, ToHex, FromHex
 from test_framework.address import script_to_p2sh, key_to_p2pkh
@@ -113,15 +114,15 @@ class SegWitTest(BitcoinTestFramework):
         self.log.info("Verify sigops are counted in GBT with pre-BIP141 rules before the fork")
         txid = self.nodes[0].sendtoaddress(self.nodes[0].getnewaddress(), 1)
         tmpl = self.nodes[0].getblocktemplate({})
-        assert(tmpl['sizelimit'] == 1000000)
+        assert(tmpl['sizelimit'] == DEFAULT_MAX_BLOCK_SIZE)
         assert('weightlimit' not in tmpl)
-        assert(tmpl['sigoplimit'] == 20000)
+        assert(tmpl['sigoplimit'] == MAX_BLOCK_SIGOPS)
         assert(tmpl['transactions'][0]['hash'] == txid)
         assert(tmpl['transactions'][0]['sigops'] == 2)
         tmpl = self.nodes[0].getblocktemplate({'rules':['segwit']})
-        assert(tmpl['sizelimit'] == 1000000)
+        assert(tmpl['sizelimit'] == DEFAULT_MAX_BLOCK_SIZE)
         assert('weightlimit' not in tmpl)
-        assert(tmpl['sigoplimit'] == 20000)
+        assert(tmpl['sigoplimit'] == MAX_BLOCK_SIGOPS)
         assert(tmpl['transactions'][0]['hash'] == txid)
         assert(tmpl['transactions'][0]['sigops'] == 2)
         self.nodes[0].generate(1) #block 162
@@ -226,11 +227,12 @@ class SegWitTest(BitcoinTestFramework):
         self.success_mine(self.nodes[0], p2sh_ids[NODE_0][WIT_V1][0], True) #block 435
 
         self.log.info("Verify sigops are counted in GBT with BIP141 rules after the fork")
+
         txid = self.nodes[0].sendtoaddress(self.nodes[0].getnewaddress(), 1)
         tmpl = self.nodes[0].getblocktemplate({'rules':['segwit']})
-        assert(tmpl['sizelimit'] >= 3999577)  # actual maximum size is lower due to minimum mandatory non-witness data
-        assert(tmpl['weightlimit'] == 4000000)
-        assert(tmpl['sigoplimit'] == 80000)
+        assert(tmpl['sizelimit'] >= WITNESS_SCALE_FACTOR * DEFAULT_MAX_BLOCK_SIZE)  # actual maximum size is lower due to minimum mandatory non-witness data
+        assert(tmpl['weightlimit'] == MAX_BLOCK_WEIGHT)
+        assert(tmpl['sigoplimit'] == WITNESS_SCALE_FACTOR * MAX_BLOCK_SIGOPS)
         assert(tmpl['transactions'][0]['txid'] == txid)
         assert(tmpl['transactions'][0]['sigops'] == 8)
 
