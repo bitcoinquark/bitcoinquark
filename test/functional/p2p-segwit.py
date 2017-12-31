@@ -88,9 +88,6 @@ class TestNode(NodeConnCB):
         else:
             self.send_message(msg_block(block))
         self.sync_with_ping()
-        print ("=========getbestblockhash========")
-        print (self.connection.rpc.getbestblockhash())
-        print (block.hash)
         assert_equal(self.connection.rpc.getbestblockhash() == block.hash, accepted)
 
 # Used to keep track of anyone-can-spend outputs that we can use in the tests
