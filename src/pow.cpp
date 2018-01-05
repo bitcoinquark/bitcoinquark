@@ -16,40 +16,71 @@
 
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)
 {
-    unsigned int nProofOfWorkLimitLegacy = UintToArith256(params.powLimitLegacy).GetCompact();
-    // Genesis block
-   if (pindexLast == NULL)
+	unsigned int nProofOfWorkLimitLegacy = UintToArith256(params.powLimitLegacy).GetCompact();
+
+	// Genesis block
+	if (pindexLast == NULL)
 	   return nProofOfWorkLimitLegacy;
 
-   int nHeight = pindexLast->nHeight + 1;
-   bool postfork = nHeight >= params.BTQHeight;
-   unsigned int nProofOfWorkLimit = UintToArith256(params.PowLimit(postfork)).GetCompact();
+	int nHeight = pindexLast->nHeight + 1;
+	bool postfork = nHeight >= params.BTQHeight;
+	unsigned int nProofOfWorkLimit = UintToArith256(params.PowLimit(postfork)).GetCompact();
 
-   if (nHeight < params.BTQHeight) {
-       return BitcoinGetNextWorkRequired(pindexLast, pblock, params);
-   }
-   else if (nHeight < params.BTQHeight + params.BTQPremineWindow) {
-       return nProofOfWorkLimit;
-   }
-   else if(nHeight < params.BTQHeight + params.BTQPremineWindow + params.nPowAveragingWindow) {
+	if (nHeight < params.BTQHeight) {
+	   return BitcoinGetNextWorkRequired(pindexLast, pblock, params);
+	}
+	else if (nHeight < params.BTQHeight + params.BTQPremineWindow) {
+	   return nProofOfWorkLimit;
+	}
+	else if(nHeight < params.BTQHeight + params.BTQPremineWindow + params.nPowAveragingWindow) {
 	   return UintToArith256(params.powLimitStart).GetCompact();
-   }
+	}
 
-   const CBlockIndex* pindexFirst = pindexLast;
-   arith_uint256 bnTot {0};
-   for (int i = 0; pindexFirst && i < params.nPowAveragingWindow; i++) {
-       arith_uint256 bnTmp;
-       bnTmp.SetCompact(pindexFirst->nBits);
-       bnTot += bnTmp;
-       pindexFirst = pindexFirst->pprev;
-   }
+	// Difficulty adjustement mechanism in case of abrupt hashrate loss
+	if(postfork) {
 
-   if (pindexFirst == NULL)
-       return nProofOfWorkLimit;
+		uint32_t nBits = pindexLast->nBits;
+		if (nBits == nProofOfWorkLimit) {
+		   return nProofOfWorkLimit;
+		}
 
-   arith_uint256 bnAvg {bnTot / params.nPowAveragingWindow};
+		const CBlockIndex *pindex6 = pindexLast->GetAncestor(nHeight - 7);
+		assert(pindex6);
+		int64_t mtp6blocks = pindexLast->GetMedianTimePast() - pindex6->GetMedianTimePast();
 
-   return CalculateNextWorkRequired(bnAvg, pindexLast->GetMedianTimePast(), pindexFirst->GetMedianTimePast(), params);
+		if (mtp6blocks > 12 * 3600) {
+
+			// If producing the last 6 block took more than 12h, increase the difficulty
+			// target by 1/4 (which reduces the difficulty by 20%). This ensure the
+			// chain do not get stuck in case we lose hashrate abruptly.
+			arith_uint256 nPow;
+			nPow.SetCompact(nBits);
+			nPow += (nPow >> 2);
+
+			// Make sure we do not go bellow allowed values.
+			const arith_uint256 bnPowLimit = UintToArith256(params.PowLimit(postfork));
+			if (nPow > bnPowLimit) nPow = bnPowLimit;
+
+			return nPow.GetCompact();
+		}
+	}
+
+	// Simple moving average over work difficulty adjustement algorithm.
+	const CBlockIndex* pindexFirst = pindexLast;
+	arith_uint256 bnTot {0};
+	for (int i = 0; pindexFirst && i < params.nPowAveragingWindow; i++) {
+	   arith_uint256 bnTmp;
+	   bnTmp.SetCompact(pindexFirst->nBits);
+	   bnTot += bnTmp;
+	   pindexFirst = pindexFirst->pprev;
+	}
+
+	if (pindexFirst == NULL)
+	   return nProofOfWorkLimit;
+
+	arith_uint256 bnAvg {bnTot / params.nPowAveragingWindow};
+
+	return CalculateNextWorkRequired(bnAvg, pindexLast->GetMedianTimePast(), pindexFirst->GetMedianTimePast(), params);
 }
 
 unsigned int CalculateNextWorkRequired(arith_uint256 bnAvg, int64_t nLastBlockTime, int64_t nFirstBlockTime, const Consensus::Params& params)
