@@ -204,7 +204,8 @@ public:
         };
 
         vPreminePubkeys = {
-            { "021dd3be6338f1842d1cf52bbcd3d408b4900ff3ecbdda77a7c19b955fcb7dd816", "03541b002b6e5c7eac7e22172475342c1095c8c012079d660ece960a13466be04e", "023372d26eb06f1c22aec0bef30f01020e911c7bf9dfcd1da59a81580de21d467b" }
+            { "021dd3be6338f1842d1cf52bbcd3d408b4900ff3ecbdda77a7c19b955fcb7dd816", "03541b002b6e5c7eac7e22172475342c1095c8c012079d660ece960a13466be04e", "023372d26eb06f1c22aec0bef30f01020e911c7bf9dfcd1da59a81580de21d467b" },
+			{ "034fa410a78864f0eb833685b9b549828f2457d48998a7dd6fcdc53c427ebae1ad", "037bd10863da072ec79a6af3de728e214107b43a4b4e11e823d30353e560e3abb7", "03a4fff6237b4429e15903625afcba1cf8d0388e44730e7c7de309345b3ecf3c0f" },
         };
     }
 };
@@ -436,9 +437,26 @@ void UpdateVersionBitsParameters(Consensus::DeploymentPos d, int64_t nStartTime,
     globalChainParams->UpdateVersionBitsParameters(d, nStartTime, nTimeout);
 }
 
+static CScript CltvMultiSigScript(const std::vector<std::string>& pubkeys, uint32_t lock_time) {
+    assert(pubkeys.size() == 3);
+    CScript redeem_script;
+    if (lock_time > 0) {
+        redeem_script << lock_time << OP_CHECKLOCKTIMEVERIFY << OP_DROP;
+    }
+    redeem_script << 2;
+    for (const std::string& pubkey : pubkeys) {
+        redeem_script << ToByteVector(ParseHex(pubkey));
+    }
+    redeem_script << 3 << OP_CHECKMULTISIG;
+    return redeem_script;
+}
+
 // Block height must be >=BTQHeight and <BTQHeight + BTQPremineWindow
 // The premine address is expected to be a multisig (P2SH) address
 bool CChainParams::IsPremineAddressScript(const CScript& scriptPubKey, uint32_t height) const {
+
+	static const int LOCK_STAGES = 18;  // 18 months
+    static const int LOCK_TIME = LOCK_STAGES * 30 * 24 * 3600;  // 18 months
 
     assert((uint32_t)consensus.BTQHeight <= height &&
            height < (uint32_t)(consensus.BTQHeight + consensus.BTQPremineWindow));
@@ -448,16 +466,22 @@ bool CChainParams::IsPremineAddressScript(const CScript& scriptPubKey, uint32_t 
     }
 
     int block = height - consensus.BTQHeight;
-    const std::vector<std::string> pubkeys = vPreminePubkeys[block % vPreminePubkeys.size()];  // Round robin.
-
-    for (const std::string& pubkey : pubkeys) {
-    	std::vector<unsigned char> vec = ParseHex(pubkey.c_str());
-    	CPubKey cpubkey(vec);
-    	CScript target_scriptPubkey = GetScriptForDestination(cpubkey.GetID());
-        if (scriptPubKey == target_scriptPubkey) {
-            return true;
-        }
+    int num_unlocked = consensus.BTQPremineWindow * 46 / 100;  // 46% unlocked.
+	int num_locked = consensus.BTQPremineWindow - num_unlocked;  // 54% time-locked.
+	int stage_lock_time = LOCK_TIME / LOCK_STAGES / consensus.nPowTargetSpacing;
+	int stage_block_height = num_locked / LOCK_STAGES;
+	const std::vector<std::string> pubkeys = vPreminePubkeys[block % vPreminePubkeys.size()];  // Round robin.
+	CScript redeem_script;
+	if (block < num_unlocked) {
+		redeem_script = CltvMultiSigScript(pubkeys, 0);
+	} else {
+		int locked_block = block - num_unlocked;
+		int stage = locked_block / stage_block_height;
+		int lock_time = consensus.BTQHeight + stage_lock_time * (1 + stage);
+		redeem_script = CltvMultiSigScript(pubkeys, lock_time);
 	}
-    return false;
+	CScript target_scriptPubkey = GetScriptForDestination(CScriptID(redeem_script));
+	return scriptPubKey == target_scriptPubkey;
+
 }
 
