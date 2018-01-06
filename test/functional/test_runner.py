@@ -166,6 +166,8 @@ NON_SCRIPTS = [
     "test_runner.py",
     "p2p-compactblocks.py",
     'btq-hardfork.py',
+    'addressindex.py',
+    'spentindex.py',
 ]
 
 def main():
