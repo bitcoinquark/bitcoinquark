@@ -5,6 +5,9 @@ src/bitcoin
 src/bitcoind
 src/bitcoin-cli
 src/bitcoin-tx
+src/bitcoinquarkd
+src/bitcoinquark-cli
+src/bitcoinquark-tx
 src/test/test_bitcoin
 src/test/test_bitcoin_fuzzy
 src/qt/test/test_bitcoin-qt
@@ -75,6 +78,7 @@ src/qt/test/moc*.cpp
 *.qm
 Makefile
 bitcoin-qt
+bitcoinquark-qt
 Bitcoin-Qt.app
 
 # Unit-tests

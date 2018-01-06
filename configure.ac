@@ -15,7 +15,7 @@ AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([build-aux/m4])
 
 BITCOIN_DAEMON_NAME=bitcoinquarkd
-BITCOIN_GUI_NAME=bitcoin-qt
+BITCOIN_GUI_NAME=bitcoinquark-qt
 BITCOIN_CLI_NAME=bitcoinquark-cli
 BITCOIN_TX_NAME=bitcoinquark-tx
 
