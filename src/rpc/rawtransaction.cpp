@@ -62,81 +62,93 @@ void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry)
 void TxDetailToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry)
 {
     uint256 txid = tx.GetHash();
-    entry.push_back(Pair("txid", txid.GetHex()));
-    entry.push_back(Pair("size", (int)::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION)));
-    entry.push_back(Pair("version", tx.nVersion));
-    entry.push_back(Pair("locktime", (int64_t)tx.nLockTime));
+	entry.pushKV("txid", tx.GetHash().GetHex());
+    entry.pushKV("hash", tx.GetWitnessHash().GetHex());
+    entry.pushKV("version", tx.nVersion);
+    entry.pushKV("size", (int)::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION));
+    entry.pushKV("vsize", (GetTransactionWeight(tx) + WITNESS_SCALE_FACTOR - 1) / WITNESS_SCALE_FACTOR);
+    entry.pushKV("locktime", (int64_t)tx.nLockTime);
     UniValue vin(UniValue::VARR);
     for (const CTxIn& txin : tx.vin) {
         UniValue in(UniValue::VOBJ);
         if (tx.IsCoinBase())
-            in.push_back(Pair("coinbase", HexStr(txin.scriptSig.begin(), txin.scriptSig.end())));
+            in.pushKV("coinbase", HexStr(txin.scriptSig.begin(), txin.scriptSig.end()));
         else {
-            in.push_back(Pair("txid", txin.prevout.hash.GetHex()));
-            in.push_back(Pair("vout", (int64_t)txin.prevout.n));
+            in.pushKV("txid", txin.prevout.hash.GetHex());
+            in.pushKV("vout", (int64_t)txin.prevout.n);
             UniValue o(UniValue::VOBJ);
-            o.push_back(Pair("asm", ScriptToAsmStr(txin.scriptSig, true)));
-            o.push_back(Pair("hex", HexStr(txin.scriptSig.begin(), txin.scriptSig.end())));
-            in.push_back(Pair("scriptSig", o));
+            o.pushKV("asm", ScriptToAsmStr(txin.scriptSig, true));
+            o.pushKV("hex", HexStr(txin.scriptSig.begin(), txin.scriptSig.end()));
+            in.pushKV("scriptSig", o);
+
+            if (!txin.scriptWitness.IsNull()) {
+                UniValue txinwitness(UniValue::VARR);
+                for (const auto& item : txin.scriptWitness.stack) {
+                    txinwitness.push_back(HexStr(item.begin(), item.end()));
+                }
+                in.pushKV("txinwitness", txinwitness);
+            }
 
             // Add address and value info if spentindex enabled
             CSpentIndexValue spentInfo;
             CSpentIndexKey spentKey(txin.prevout.hash, txin.prevout.n);
             if (GetSpentIndex(spentKey, spentInfo)) {
-                in.push_back(Pair("value", ValueFromAmount(spentInfo.satoshis)));
-                in.push_back(Pair("valueSat", spentInfo.satoshis));
+                in.pushKV("value", ValueFromAmount(spentInfo.satoshis));
+                in.pushKV("valueSat", spentInfo.satoshis);
                 if (spentInfo.addressType == 1) {
-                    in.push_back(Pair("address", CBitcoinAddress(CKeyID(spentInfo.addressHash)).ToString()));
+                    in.pushKV("address", CBitcoinAddress(CKeyID(spentInfo.addressHash)).ToString());
                 } else if (spentInfo.addressType == 2)  {
-                    in.push_back(Pair("address", CBitcoinAddress(CScriptID(spentInfo.addressHash)).ToString()));
+                    in.pushKV("address", CBitcoinAddress(CScriptID(spentInfo.addressHash)).ToString());
                 }
             }
 
         }
-        in.push_back(Pair("sequence", (int64_t)txin.nSequence));
+        in.pushKV("sequence", (int64_t)txin.nSequence);
         vin.push_back(in);
     }
-    entry.push_back(Pair("vin", vin));
+    entry.pushKV("vin", vin);
     UniValue vout(UniValue::VARR);
     for (unsigned int i = 0; i < tx.vout.size(); i++) {
         const CTxOut& txout = tx.vout[i];
         UniValue out(UniValue::VOBJ);
-        out.push_back(Pair("value", ValueFromAmount(txout.nValue)));
-        out.push_back(Pair("valueSat", txout.nValue));
-        out.push_back(Pair("n", (int64_t)i));
+        out.pushKV("value", ValueFromAmount(txout.nValue));
+        out.pushKV("valueSat", txout.nValue);
+        out.pushKV("n", (int64_t)i);
         UniValue o(UniValue::VOBJ);
         ScriptPubKeyToUniv(txout.scriptPubKey, o, true);
-        out.push_back(Pair("scriptPubKey", o));
+        out.pushKV("scriptPubKey", o);
 
         // Add spent information if spentindex is enabled
         CSpentIndexValue spentInfo;
         CSpentIndexKey spentKey(txid, i);
         if (GetSpentIndex(spentKey, spentInfo)) {
-            out.push_back(Pair("spentTxId", spentInfo.txid.GetHex()));
-            out.push_back(Pair("spentIndex", (int)spentInfo.inputIndex));
-            out.push_back(Pair("spentHeight", spentInfo.blockHeight));
+            out.pushKV("spentTxId", spentInfo.txid.GetHex());
+            out.pushKV("spentIndex", (int)spentInfo.inputIndex);
+            out.pushKV("spentHeight", spentInfo.blockHeight);
         }
 
         vout.push_back(out);
     }
-    entry.push_back(Pair("vout", vout));
+    entry.pushKV("vout", vout);
 
     if (!hashBlock.IsNull()) {
-        entry.push_back(Pair("blockhash", hashBlock.GetHex()));
+        entry.pushKV("blockhash", hashBlock.GetHex());
         BlockMap::iterator mi = mapBlockIndex.find(hashBlock);
         if (mi != mapBlockIndex.end() && (*mi).second) {
             CBlockIndex* pindex = (*mi).second;
             if (chainActive.Contains(pindex)) {
-                entry.push_back(Pair("height", pindex->nHeight));
-                entry.push_back(Pair("confirmations", 1 + chainActive.Height() - pindex->nHeight));
-                entry.push_back(Pair("time", pindex->GetBlockTime()));
-                entry.push_back(Pair("blocktime", pindex->GetBlockTime()));
+                entry.pushKV("height", pindex->nHeight);
+                entry.pushKV("confirmations", 1 + chainActive.Height() - pindex->nHeight);
+                entry.pushKV("time", pindex->GetBlockTime());
+                entry.pushKV("blocktime", pindex->GetBlockTime());
             } else {
-                entry.push_back(Pair("height", -1));
-                entry.push_back(Pair("confirmations", 0));
+                entry.pushKV("height", -1);
+                entry.pushKV("confirmations", 0);
             }
         }
     }
+
+    entry.pushKV("hex", EncodeHexTx(tx, RPCSerializationFlags())); // the hex-encoded transaction. used the name "hex" to be consistent with the verbose output of "getrawtransaction".
 }
 
 UniValue getrawtransaction(const JSONRPCRequest& request)
