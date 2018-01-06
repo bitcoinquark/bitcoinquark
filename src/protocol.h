@@ -268,6 +268,10 @@ enum ServiceFlags : uint64_t {
     // If this is turned off then the node will not service nor make xthin requests
     NODE_XTHIN = (1 << 4),
 
+	// NODE_BITCOIN_QUARK means the node supports Bitcoin Quark and the
+    // associated consensus rule changes.
+	NODE_BITCOIN_QUARK = (1 << 6),
+
     // Bits 24-31 are reserved for temporary experiments. Just pick a bit that
     // isn't getting used, or one not being used much, and notify the
     // bitcoin-development mailing list. Remember that service bits are just

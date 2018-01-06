@@ -1143,6 +1143,9 @@ bool AppInitParameterInteraction(Config& config)
     if (gArgs.GetBoolArg("-peerbloomfilters", DEFAULT_PEERBLOOMFILTERS))
         nLocalServices = ServiceFlags(nLocalServices | NODE_BLOOM);
 
+    // Signal Bitcoin Quark support.
+    nLocalServices = ServiceFlags(nLocalServices | NODE_BITCOIN_QUARK);
+
     if (gArgs.GetArg("-rpcserialversion", DEFAULT_RPC_SERIALIZE_VERSION) < 0)
         return InitError("rpcserialversion must be non-negative.");
 
