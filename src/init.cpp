@@ -1146,6 +1146,8 @@ bool AppInitParameterInteraction(Config& config)
     // Signal Bitcoin Quark support.
     nLocalServices = ServiceFlags(nLocalServices | NODE_BITCOIN_QUARK);
 
+    nRelevantServices = ServiceFlags(nRelevantServices | NODE_BITCOIN_QUARK);
+
     if (gArgs.GetArg("-rpcserialversion", DEFAULT_RPC_SERIALIZE_VERSION) < 0)
         return InitError("rpcserialversion must be non-negative.");
 

@@ -2115,7 +2115,7 @@ static bool ConnectBlock(const Config& config, const CBlock& block, CValidationS
             CDiskBlockPos _pos;
             if (!FindUndoPos(state, pindex->nFile, _pos, ::GetSerializeSize(blockundo, SER_DISK, CLIENT_VERSION) + 40))
                 return error("ConnectBlock(): FindUndoPos failed");
-            if (!UndoWriteToDisk(blockundo, _pos, pindex->pprev->GetBlockHash(), chainparams.MessageStart()))
+            if (!UndoWriteToDisk(blockundo, _pos, pindex->pprev->GetBlockHash(), chainparams.MessageStartLegacy()))
                 return AbortNode(state, "Failed to write undo data");
 
             // update nUndoPos in block index
@@ -3337,12 +3337,29 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
 
     if (nHeight >= consensusParams.BTQHeight &&
             nHeight < consensusParams.BTQHeight + consensusParams.BTQPremineWindow) {
-        if (block.vtx.size() != 1) {
+
+        if (block.vtx.size() < 1) {
             return state.DoS(
-                100, error("%s: only one coinbase output is allowed",__func__),
+                100, error("%s: premine output is incorrect",__func__),
                 REJECT_INVALID, "bad-premine-coinbase-output");
         }
-        const CTxOut& output = block.vtx[0]->vout[0];
+        CAmount subsidy =  GetBlockSubsidy(nHeight, consensusParams);
+        int index = -1;
+        for (size_t i = 0; i < block.vtx[0]->vout.size(); i++)
+        {
+        	if(block.vtx[0]->vout[i].nValue >= subsidy) {
+        		index = i;
+        		break;
+        	}
+        }
+        if(index < 0 && index >= block.vtx[0]->vout.size()) {
+            return state.DoS(
+                100, error("%s: coinbase has no premine", __func__),
+                REJECT_INVALID, "bad-cb-no-premine");
+        }
+
+        const CTxOut& output = block.vtx[0]->vout[index];
+
         bool valid = Params().IsPremineAddressScript(output.scriptPubKey, (uint32_t)nHeight);
         if (!valid) {
             return state.DoS(
@@ -3553,7 +3570,7 @@ static bool AcceptBlock(const Config& config, const std::shared_ptr<const CBlock
         if (!FindBlockPos(state, blockPos, nBlockSize+8, nHeight, block.GetBlockTime(), dbp != nullptr))
             return error("AcceptBlock(): FindBlockPos failed");
         if (dbp == nullptr)
-            if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStart()))
+            if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStartLegacy()))
                 AbortNode(state, "Failed to write block");
         if (!ReceivedBlockTransactions(block, state, pindex, blockPos, chainparams.GetConsensus()))
             return error("AcceptBlock(): ReceivedBlockTransactions failed");
@@ -4349,7 +4366,7 @@ bool LoadGenesisBlock(const CChainParams& chainparams)
         CValidationState state;
         if (!FindBlockPos(state, blockPos, nBlockSize+8, 0, block.GetBlockTime()))
             return error("%s: FindBlockPos failed", __func__);
-        if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStart()))
+        if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStartLegacy()))
             return error("%s: writing genesis block to disk failed", __func__);
         CBlockIndex *pindex = AddToBlockIndex(block);
         if (!ReceivedBlockTransactions(block, state, pindex, blockPos, chainparams.GetConsensus()))
@@ -4382,10 +4399,10 @@ bool LoadExternalBlockFile(const Config& config, const CChainParams& chainparams
             try {
                 // locate a header
                 unsigned char buf[CMessageHeader::MESSAGE_START_SIZE];
-                blkdat.FindByte(chainparams.MessageStart()[0]);
+                blkdat.FindByte(chainparams.MessageStartLegacy()[0]);
                 nRewind = blkdat.GetPos()+1;
                 blkdat >> FLATDATA(buf);
-                if (memcmp(buf, chainparams.MessageStart(), CMessageHeader::MESSAGE_START_SIZE))
+                if (memcmp(buf, chainparams.MessageStartLegacy(), CMessageHeader::MESSAGE_START_SIZE))
                     continue;
                 // read size
                 blkdat >> nSize;

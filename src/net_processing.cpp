@@ -2903,10 +2903,16 @@ bool PeerLogicValidation::ProcessMessages(const Config& config, CNode* pfrom, st
 
     // This is a new peer. Before doing anything, we need to detect what magic
     // the peer is using.
-    if (pfrom->nVersion == 0 &&
-        memcmp(msg.hdr.pchMessageStart, chainparams.MessageStart(),
-               CMessageHeader::MESSAGE_START_SIZE) == 0) {
-            pfrom->fUsesQuarkMagic = true;
+    if (pfrom->nVersion == 0) {
+
+		if(memcmp(msg.hdr.pchMessageStart, chainparams.MessageStart(),
+           CMessageHeader::MESSAGE_START_SIZE) == 0) {
+			pfrom->fUsesQuarkMagic = true;
+		}
+		else if(memcmp(msg.hdr.pchMessageStart, chainparams.MessageStartLegacy(),
+		   CMessageHeader::MESSAGE_START_SIZE) == 0) {
+			pfrom->fUsesQuarkMagic = false;
+		}
     }
 
     // Scan for message start
