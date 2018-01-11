@@ -1747,6 +1747,10 @@ int32_t ComputeBlockVersion(const CBlockIndex* pindexPrev, const Consensus::Para
         }
     }
 
+    if(pindexPrev != nullptr && pindexPrev->nHeight + 1 >= params.BTQHeight) {
+    	nVersion |= VERSIONBITS_BITCOIN_QUARK;
+    }
+
     return nVersion;
 }
 
@@ -3257,6 +3261,7 @@ static bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationSta
     assert(pindexPrev != nullptr);
     const int nHeight = pindexPrev->nHeight + 1;
 
+
     // Check proof of work
     const Consensus::Params& consensusParams = params.GetConsensus();
     if (block.nBits != GetNextWorkRequired(pindexPrev, &block, consensusParams))
@@ -3276,6 +3281,10 @@ static bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationSta
     if (nHeight >= consensusParams.BTQHeight && block.nHeight != (uint32_t)nHeight)
         return state.Invalid(false, REJECT_INVALID, "bad-height", "incorrect block height");
 
+    if(nHeight >= consensusParams.BTQHeight && !block.IsBitcoinQuark()) {
+    	return state.Invalid(false, REJECT_INVALID, strprintf("bad-version(0x%08x)", block.nVersion),
+    	                                 strprintf("rejected nVersion=0x%08x block", block.nVersion));
+    }
     // Check timestamp against prev
     if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
         return state.Invalid(false, REJECT_INVALID, "time-too-old", "block's timestamp is too early");

@@ -50,10 +50,14 @@ public:
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
-    	bool new_format = !(s.GetVersion() & SERIALIZE_BLOCK_LEGACY);
+
         READWRITE(this->nVersion);
         READWRITE(hashPrevBlock);
         READWRITE(hashMerkleRoot);
+
+        // Check version
+        bool new_format = IsBitcoinQuark();
+
         if (new_format)
         {
 			READWRITE(nHeight);
@@ -101,6 +105,8 @@ public:
     {
         return (int64_t)nTime;
     }
+
+    bool IsBitcoinQuark() const;
 };
 
 

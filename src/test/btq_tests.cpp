@@ -7,6 +7,7 @@
 #include "version.h"
 #include "primitives/block.h"
 #include "test/test_bitcoin.h"
+#include "versionbits.h"
 
 #include <stdint.h>
 
@@ -51,6 +52,7 @@ BOOST_AUTO_TEST_CASE(zcash_header_compatible)
 
     // `CBlockHeader.nHeight` should be placed in the first 4 bytes of `ZcashBlockHeader.hashReserved`.
     btg_header.nHeight = 10000000;
+    btg_header.nVersion |= VERSIONBITS_BITCOIN_QUARK;
     // `CBlockHeader.nReserved[5:7]` should be placed in the last 8 bytes of `ZcashBlockHeader.hashReserved`.
     btg_header.nReserved[5] = 1234;
     btg_header.nReserved[6] = 0;

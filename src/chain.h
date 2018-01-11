@@ -369,6 +369,9 @@ public:
     //! Efficiently find an ancestor of this block.
     CBlockIndex* GetAncestor(int height);
     const CBlockIndex* GetAncestor(int height) const;
+
+    //! Check whether this block is bitcoinquark.
+    bool IsBitcoinQuark() const;
 };
 
 arith_uint256 GetBlockProof(const CBlockIndex& block);
@@ -414,13 +417,25 @@ public:
         READWRITE(this->nVersion);
         READWRITE(hashPrev);
         READWRITE(hashMerkleRoot);
-        for(size_t i = 0; i < (sizeof(nReserved) / sizeof(nReserved[0])); i++) {
-			READWRITE(nReserved[i]);
-		}
-        READWRITE(nTime);
-        READWRITE(nBits);
-        READWRITE(nNonce);
-        READWRITE(nSolution);
+
+        // Check version
+        bool new_format = IsBitcoinQuark();
+        if(new_format) {
+			for(size_t i = 0; i < (sizeof(nReserved) / sizeof(nReserved[0])); i++) {
+				READWRITE(nReserved[i]);
+			}
+			READWRITE(nTime);
+			READWRITE(nBits);
+			READWRITE(nNonce);
+			READWRITE(nSolution);
+        }
+        else {
+            READWRITE(nTime);
+            READWRITE(nBits);
+			uint32_t legacy_nonce = (uint32_t)nNonce.GetUint64(0);
+			READWRITE(legacy_nonce);
+			nNonce = ArithToUint256(arith_uint256(legacy_nonce));
+        }
     }
 
     uint256 GetBlockHash() const
@@ -438,7 +453,6 @@ public:
         return block.GetHash();
     }
 
-
     std::string ToString() const
     {
         std::string str = "CDiskBlockIndex(";
@@ -448,6 +462,8 @@ public:
             hashPrev.ToString());
         return str;
     }
+
+
 };
 
 /** An in-memory indexed chain of blocks. */

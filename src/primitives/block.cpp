@@ -11,6 +11,7 @@
 #include "chainparams.h"
 #include "consensus/params.h"
 #include "crypto/common.h"
+#include "versionbits.h"
 
 uint256 CBlockHeader::GetHash(const Consensus::Params& params) const
 {
@@ -29,6 +30,11 @@ uint256 CBlockHeader::GetHash() const
 {
     const Consensus::Params& consensusParams = Params().GetConsensus();
     return GetHash(consensusParams);
+}
+
+bool CBlockHeader::IsBitcoinQuark() const
+{
+	return IsBitcoinQuarkVersion(nVersion);
 }
 
 std::string CBlock::ToString() const

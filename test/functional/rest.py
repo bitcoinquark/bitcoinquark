@@ -211,7 +211,8 @@ class RESTTest (BitcoinTestFramework):
         response_header = http_get_call(url.hostname, url.port, '/rest/headers/1/'+bb_hash+self.FORMAT_SEPARATOR+"bin", True)
         assert_equal(response_header.status, 200)
         response_header_length = int(response_header.getheader('content-length'))
-        assert_greater_than(response_header_length, 80)
+        #assert_greater_than(response_header_length, 80)
+        assert_equal(response_header_length, 80)
         response_header_str = response_header.read()
         assert_equal(response_str[0:response_header_length], response_header_str)
 
