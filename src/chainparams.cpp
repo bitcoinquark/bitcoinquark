@@ -157,6 +157,10 @@ public:
         assert(consensus.hashGenesisBlock == uint256S("0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
         assert(genesis.hashMerkleRoot == uint256S("0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));
 
+        // bitcoinquark dnsseed
+        vSeeds.emplace_back("dnsseed1.bitcoinquark.org", true);
+        vSeeds.emplace_back("dnsseed2.bitcoinquark.org", true);
+        // bitcoin dnsseed used by bootstrap=1 mode
         // Note that of those with the service bits flag, most only support a subset of possible options
         vSeeds.emplace_back("seed.bitcoin.sipa.be", true); // Pieter Wuille, only supports x1, x5, x9, and xd
         vSeeds.emplace_back("dnsseed.bluematt.me", true); // Matt Corallo, only supports x9
@@ -284,6 +288,10 @@ public:
 
         vFixedSeeds.clear();
         vSeeds.clear();
+        // bitcoinquark dnsseed
+        vSeeds.emplace_back("testnet-seed1.bitcoinquark.org", true);
+        vSeeds.emplace_back("testnet-seed2.bitcoinquark.org", true);
+        // bitcoin dnsseed used by bootstrap=1 mode
         // nodes with support for servicebits filtering should be at the top
         vSeeds.emplace_back("testnet-seed.bitcoin.jonasschnelli.ch", true);
         vSeeds.emplace_back("seed.tbtc.petertodd.org", true);
