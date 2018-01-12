@@ -11,7 +11,7 @@
 #include "chainparams.h"
 #include "consensus/params.h"
 #include "crypto/common.h"
-#include "versionbits.h"
+#include "script/script.h"
 
 uint256 CBlockHeader::GetHash(const Consensus::Params& params) const
 {
@@ -32,9 +32,20 @@ uint256 CBlockHeader::GetHash() const
     return GetHash(consensusParams);
 }
 
-bool CBlockHeader::IsBitcoinQuark() const
+bool CBlockHeader::IsBitcoinQuark(int heightOrTime) const
 {
-	return IsBitcoinQuarkVersion(nVersion);
+	if(heightOrTime >= LOCKTIME_THRESHOLD) {
+		// Is a legacy time field
+		return false;
+	}
+	int height = heightOrTime;
+
+	// genesis block
+	if(height == 0) {
+		return false;
+	}
+
+    return height >= Params().GetConsensus().BTQHeight;
 }
 
 std::string CBlock::ToString() const

@@ -55,28 +55,59 @@ public:
         READWRITE(hashPrevBlock);
         READWRITE(hashMerkleRoot);
 
-        // Check version
-        bool new_format = IsBitcoinQuark();
+        // Read block
+        if(ser_action.ForRead()) {
 
-        if (new_format)
+        	// BitcoinQuark format next field is nHeight, legacy format is nTime.
+        	uint32_t next_field = 0;
+        	// Try read next field
+        	READWRITE(next_field);
+        	bool isBitcoinQuark = IsBitcoinQuark(next_field);
+        	if(isBitcoinQuark)
+        	{
+        		nHeight = next_field;
+    			for(size_t i = 0; i < (sizeof(nReserved) / sizeof(nReserved[0])); i++)
+    			{
+    				READWRITE(nReserved[i]);
+    			}
+    			READWRITE(nTime);
+    			READWRITE(nBits);
+    			READWRITE(nNonce);
+    			READWRITE(nSolution);
+        	}
+        	else
+        	{
+        		nTime = next_field;
+        		READWRITE(nBits);
+        		uint32_t legacy_nonce = (uint32_t)nNonce.GetUint64(0);
+                READWRITE(legacy_nonce);
+                nNonce = ArithToUint256(arith_uint256(legacy_nonce));
+        	}
+        }
+        else
         {
-			READWRITE(nHeight);
-			for(size_t i = 0; i < (sizeof(nReserved) / sizeof(nReserved[0])); i++)
+        	bool isBitcoinQuarkHeight = IsBitcoinQuark(nHeight);
+        	if(isBitcoinQuarkHeight)
 			{
-				READWRITE(nReserved[i]);
+        		READWRITE(nHeight);
+				for(size_t i = 0; i < (sizeof(nReserved) / sizeof(nReserved[0])); i++)
+				{
+					READWRITE(nReserved[i]);
+				}
+				READWRITE(nTime);
+				READWRITE(nBits);
+				READWRITE(nNonce);
+				READWRITE(nSolution);
 			}
-		}
-        READWRITE(nTime);
-        READWRITE(nBits);
-        if (new_format)
-        {
-			READWRITE(nNonce);
-			READWRITE(nSolution);
-		} else {
-			uint32_t legacy_nonce = (uint32_t)nNonce.GetUint64(0);
-			READWRITE(legacy_nonce);
-			nNonce = ArithToUint256(arith_uint256(legacy_nonce));
-		}
+			else
+			{
+				READWRITE(nTime);
+				READWRITE(nBits);
+				uint32_t legacy_nonce = (uint32_t)nNonce.GetUint64(0);
+				READWRITE(legacy_nonce);
+				nNonce = ArithToUint256(arith_uint256(legacy_nonce));
+			}
+        }
     }
 
     void SetNull()
@@ -106,7 +137,12 @@ public:
         return (int64_t)nTime;
     }
 
-    bool IsBitcoinQuark() const;
+    bool IsBitcoinQuark() const
+    {
+    	return IsBitcoinQuark(nHeight);
+    }
+
+    bool IsBitcoinQuark(int heightOrTime) const;
 };
 
 

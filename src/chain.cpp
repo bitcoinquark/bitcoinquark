@@ -4,7 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "chain.h"
-#include "versionbits.h"
+#include "chainparams.h"
 
 /**
  * CChain implementation
@@ -112,9 +112,9 @@ const CBlockIndex* CBlockIndex::GetAncestor(int height) const
     return const_cast<CBlockIndex*>(this)->GetAncestor(height);
 }
 
-bool CBlockIndex::IsBitcoinQuark() const
+bool CBlockIndex::IsBitcoinQuark(int height) const
 {
-	return IsBitcoinQuarkVersion(nVersion);
+	return height >= Params().GetConsensus().BTQHeight;
 }
 
 void CBlockIndex::BuildSkip()

@@ -371,7 +371,7 @@ public:
     const CBlockIndex* GetAncestor(int height) const;
 
     //! Check whether this block is bitcoinquark.
-    bool IsBitcoinQuark() const;
+    bool IsBitcoinQuark(int height) const;
 };
 
 arith_uint256 GetBlockProof(const CBlockIndex& block);
@@ -419,8 +419,9 @@ public:
         READWRITE(hashMerkleRoot);
 
         // Check version
-        bool new_format = IsBitcoinQuark();
-        if(new_format) {
+        bool isBitcoinQuark = IsBitcoinQuark(nHeight);
+        if(isBitcoinQuark) {
+        	READWRITE(nHeight);
 			for(size_t i = 0; i < (sizeof(nReserved) / sizeof(nReserved[0])); i++) {
 				READWRITE(nReserved[i]);
 			}
