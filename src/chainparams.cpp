@@ -98,7 +98,7 @@ public:
         consensus.BTQPremineWindow = 100;
         consensus.BTQPremineEnforceWhitelist = true;
         consensus.powLimit = uint256S("0007ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
-        consensus.powLimitStart = uint256S("0000000fffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        consensus.powLimitStart = uint256S("0007ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.powLimitLegacy = uint256S("00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.nPowAveragingWindow = 17;
 		assert(maxUint/UintToArith256(consensus.powLimit) >= consensus.nPowAveragingWindow);
@@ -228,11 +228,11 @@ public:
         consensus.BIP34Hash = uint256S("0x0000000023b3a96d3484e5abb3755c413e7d41500f8e2a5c3f0dd01299cd8ef8");
         consensus.BIP65Height = 581885; // 00000000007f6655f22f98e72ed80d8b06dc761d5da09df0fa1dc4be4f861eb6
         consensus.BIP66Height = 330776; // 000000002104c8c45e99a8853285a3b592602a3ccde2b832481da85e9e4ba182
-        consensus.BTQHeight = 100000000; // Not activated yet.
+        consensus.BTQHeight = 1258721;
         consensus.BTQPremineWindow = 100;
-        consensus.BTQPremineEnforceWhitelist = false;
-        consensus.powLimit = uint256S("0007ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
-        consensus.powLimitStart = uint256S("0000000fffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        consensus.BTQPremineEnforceWhitelist = true;
+        consensus.powLimit = uint256S("007fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        consensus.powLimitStart = uint256S("007fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.powLimitLegacy = uint256S("00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.nPowAveragingWindow = 17;
         assert(maxUint/UintToArith256(consensus.powLimit) >= consensus.nPowAveragingWindow);
@@ -323,6 +323,10 @@ public:
             0.15
         };
 
+        vPreminePubkeys = {
+            { "0330ac64a02530018aee75282511ab03ad14afded0de3a7631f859fcc95e7053f5","02b1dd3a3d48bae5e8372e896c12fcf1a6a472df03a4e279f1228ea43eb72d7a76","029afac47580783cd5e0fb7b9ef5eb70302e153c02b3880f254eed34e636228fb1" },
+			{ "03408adf7846c306e9bb70b4943a28605195a7baf8f25aabd0d9cad703533ad154","03e8b65f7dddd6747598747dba29f66874456e0182b6c4afaf92b01cf1c97ed333","03b318bfec48b38094f5825b6d60d325df13386cb00742bf8e2b7798c7e19f5616" }
+        };
     }
 };
 
