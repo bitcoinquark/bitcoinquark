@@ -37,7 +37,7 @@ sign_multisig(CScript scriptPubKey, std::vector<CKey> keys, CTransaction transac
 
 BOOST_AUTO_TEST_CASE(multisig_verify)
 {
-    unsigned int flags = SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC;
+    unsigned int flags = SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC | SCRIPT_ENABLE_SIGHASH_FORKID;
 
     ScriptError err;
     CKey key[4];

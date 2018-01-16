@@ -177,6 +177,17 @@ uint32_t static GetHashType(const valtype &vchSig) {
     return vchSig.back();
 }
 
+static void CleanupScriptCode(CScript &scriptCode,
+                              const std::vector<uint8_t> &vchSig,
+                              uint32_t flags) {
+    // Drop the signature in scripts when SIGHASH_FORKID is not used.
+    uint32_t nHashType = GetHashType(vchSig);
+    if (!(flags & SCRIPT_ENABLE_SIGHASH_FORKID) ||
+        !(nHashType & SIGHASH_FORKID)) {
+        scriptCode.FindAndDelete(CScript(vchSig));
+    }
+}
+
 bool static IsLowDERSignature(const valtype &vchSig, ScriptError* serror) {
     if (!IsValidSignatureEncoding(vchSig)) {
         return set_error(serror, SCRIPT_ERR_SIG_DER);
@@ -199,19 +210,6 @@ bool static IsDefinedHashtypeSignature(const valtype &vchSig) {
     return true;
 }
 
-bool static UsesForkId(uint32_t nHashType) {
-    return nHashType & SIGHASH_FORKID;
-}
-
-bool static UsesForkId(const valtype &vchSig) {
-    uint32_t nHashType = GetHashType(vchSig);
-    return UsesForkId(nHashType);
-}
-
-bool static AllowsNonForkId(unsigned int flags) {
-    return flags & SCRIPT_ALLOW_NON_FORKID;
-}
-
 bool CheckSignatureEncoding(const std::vector<unsigned char> &vchSig, unsigned int flags, ScriptError* serror) {
     // Empty signature. Not strictly DER encoded, but allowed to provide a
     // compact way to provide an invalid signature for use with CHECK(MULTI)SIG
@@ -224,14 +222,17 @@ bool CheckSignatureEncoding(const std::vector<unsigned char> &vchSig, unsigned i
         // serror is set
         return false;
     } else if ((flags & SCRIPT_VERIFY_STRICTENC) != 0) {
-
     	if (!IsDefinedHashtypeSignature(vchSig))
     		return set_error(serror, SCRIPT_ERR_SIG_HASHTYPE);
 
-    	bool requiresForkId = !AllowsNonForkId(flags);
-		bool usesForkId = UsesForkId(vchSig);
-		if (requiresForkId && !usesForkId)
-			return set_error(serror, SCRIPT_ERR_SIG_HASHTYPE);
+        bool usesForkId = GetHashType(vchSig) & SIGHASH_FORKID;
+        bool forkIdEnabled = flags & SCRIPT_ENABLE_SIGHASH_FORKID;
+        if (!forkIdEnabled && usesForkId) {
+            return set_error(serror, SCRIPT_ERR_ILLEGAL_FORKID);
+        }
+        if (forkIdEnabled && !usesForkId) {
+            return set_error(serror, SCRIPT_ERR_MUST_USE_FORKID);
+        }
     }
     return true;
 }
@@ -917,7 +918,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
 
                     // Drop the signature in pre-segwit scripts but not segwit scripts
                     if (sigversion == SIGVERSION_BASE) {
-                        scriptCode.FindAndDelete(CScript(vchSig));
+                    	CleanupScriptCode(scriptCode, vchSig, flags);
                     }
 
                     if (!CheckSignatureEncoding(vchSig, flags, serror) || !CheckPubKeyEncoding(vchPubKey, flags, sigversion, serror)) {
@@ -981,7 +982,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                     {
                         valtype& vchSig = stacktop(-isig-k);
                         if (sigversion == SIGVERSION_BASE) {
-                            scriptCode.FindAndDelete(CScript(vchSig));
+                        	CleanupScriptCode(scriptCode, vchSig, flags);
                         }
                     }
 
@@ -1202,15 +1203,12 @@ PrecomputedTransactionData::PrecomputedTransactionData(const CTransaction& txTo)
     hashOutputs = GetOutputsHash(txTo);
 }
 
-uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, const CAmount& amount, SigVersion sigversion, const PrecomputedTransactionData* cache, const int forkid)
+uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, const CAmount& amount, SigVersion sigversion, const PrecomputedTransactionData* cache)
 {
-    int nForkHashType = nHashType;
-    if (UsesForkId(nHashType))
-        nForkHashType |= forkid << 8;
 
 	// force new tx with FORKID to use bip143 transaction digest algorithm
 	// see https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki
-    if (sigversion == SIGVERSION_WITNESS_V0 || UsesForkId(nHashType)) {
+    if (sigversion == SIGVERSION_WITNESS_V0) {
         uint256 hashPrevouts;
         uint256 hashSequence;
         uint256 hashOutputs;
@@ -1250,7 +1248,7 @@ uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsig
         // Locktime
         ss << txTo.nLockTime;
         // Sighash type
-        ss << nForkHashType;
+        ss << nHashType;
 
         return ss.GetHash();
     }
@@ -1274,7 +1272,7 @@ uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsig
 
     // Serialize and hash
     CHashWriter ss(SER_GETHASH, 0);
-    ss << txTmp << nForkHashType;
+    ss << txTmp << nHashType;
     return ss.GetHash();
 }
 

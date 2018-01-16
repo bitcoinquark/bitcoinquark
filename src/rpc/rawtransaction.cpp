@@ -59,7 +59,7 @@ void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry)
     }
 }
 
-void TxDetailToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry)
+void TxDetailToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry, int nHeight = 0, int nConfirmations = 0, int nBlockTime = 0)
 {
     uint256 txid = tx.GetHash();
 	entry.pushKV("txid", tx.GetHash().GetHex());
@@ -133,18 +133,14 @@ void TxDetailToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& e
 
     if (!hashBlock.IsNull()) {
         entry.pushKV("blockhash", hashBlock.GetHex());
-        BlockMap::iterator mi = mapBlockIndex.find(hashBlock);
-        if (mi != mapBlockIndex.end() && (*mi).second) {
-            CBlockIndex* pindex = (*mi).second;
-            if (chainActive.Contains(pindex)) {
-                entry.pushKV("height", pindex->nHeight);
-                entry.pushKV("confirmations", 1 + chainActive.Height() - pindex->nHeight);
-                entry.pushKV("time", pindex->GetBlockTime());
-                entry.pushKV("blocktime", pindex->GetBlockTime());
-            } else {
-                entry.pushKV("height", -1);
-                entry.pushKV("confirmations", 0);
-            }
+        if (nConfirmations > 0) {
+            entry.pushKV("height", nHeight);
+            entry.pushKV("confirmations", nConfirmations);
+            entry.pushKV("time", nBlockTime);
+            entry.pushKV("blocktime", nBlockTime);
+        } else {
+            entry.pushKV("height", -1);
+            entry.pushKV("confirmations", 0);
         }
     }
 
@@ -247,16 +243,38 @@ UniValue getrawtransaction(const JSONRPCRequest& request)
 
     CTransactionRef tx;
     uint256 hashBlock;
+    int nHeight = 0;
+    int nConfirmations = 0;
+    int nBlockTime = 0;
+    {
     if (!GetTransaction(hash, tx, Params().GetConsensus(), hashBlock, true))
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string(fTxIndex ? "No such mempool or blockchain transaction"
             : "No such mempool transaction. Use -txindex to enable blockchain transaction queries") +
             ". Use gettransaction for wallet transactions.");
 
+		BlockMap::iterator mi = mapBlockIndex.find(hashBlock);
+		if (mi != mapBlockIndex.end() && (*mi).second) {
+			CBlockIndex* pindex = (*mi).second;
+			if (chainActive.Contains(pindex)) {
+				nHeight = pindex->nHeight;
+				nConfirmations = 1 + chainActive.Height() - pindex->nHeight;
+				nBlockTime = pindex->GetBlockTime();
+			} else {
+				nHeight = -1;
+				nConfirmations = 0;
+				nBlockTime = pindex->GetBlockTime();
+			}
+		}
+    }
+
     if (!fVerbose)
         return EncodeHexTx(*tx, RPCSerializationFlags());
 
     UniValue result(UniValue::VOBJ);
-    TxDetailToJSON(*tx, hashBlock, result);
+    if (fAddressIndex)
+    	TxDetailToJSON(*tx, hashBlock, result, nHeight, nConfirmations, nBlockTime);
+    else
+    	TxToJSON(*tx, hashBlock, result);
     return result;
 }
 
@@ -940,7 +958,7 @@ UniValue signrawtransaction(const JSONRPCRequest& request)
         };
         std::string strHashType = request.params[3].get_str();
         if (mapSigHashValues.count(strHashType))
-            nHashType = mapSigHashValues[strHashType];
+            nHashType = mapSigHashValues[strHashType] | SIGHASH_FORKID;
         else
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid sighash param");
 
@@ -948,7 +966,8 @@ UniValue signrawtransaction(const JSONRPCRequest& request)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Signature must use SIGHASH_FORKID");
     }
 
-    bool fHashSingle = ((nHashType & ~(SIGHASH_ANYONECANPAY | SIGHASH_FORKID)) == SIGHASH_SINGLE);
+    //////////////////////////// SIGHASH_ANYONECANPAY | SIGHASH_FORKID
+    bool fHashSingle = ((nHashType & ~(SIGHASH_ANYONECANPAY)) == SIGHASH_SINGLE);
 
     // Script verification errors
     UniValue vErrors(UniValue::VARR);

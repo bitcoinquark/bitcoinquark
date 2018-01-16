@@ -1411,7 +1411,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
                         // avoid splitting the network between upgraded and
                         // non-upgraded nodes.
                         CScriptCheck check2(scriptPubKey, amount, tx, i,
-                                flags & ~STANDARD_NOT_MANDATORY_VERIFY_FLAGS, cacheSigStore, &txdata);
+                        		flags & ~STANDARD_NOT_MANDATORY_VERIFY_FLAGS, cacheSigStore, &txdata);
                         if (check2())
                             return state.Invalid(false, REJECT_NONSTANDARD, strprintf("non-mandatory-script-verify-flag (%s)", ScriptErrorString(check.GetScriptError())));
                     }
@@ -1813,9 +1813,10 @@ static unsigned int GetBlockScriptFlags(const CBlockIndex* pindex, const Consens
 
     if (IsBTQHardForkEnabled(pindex->pprev, consensusparams)) {
         flags |= SCRIPT_VERIFY_STRICTENC;
-    } else {
-        flags |= SCRIPT_ALLOW_NON_FORKID;
+        flags |= SCRIPT_ENABLE_SIGHASH_FORKID;
     }
+
+
 
     return flags;
 }
