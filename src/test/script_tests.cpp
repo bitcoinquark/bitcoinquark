@@ -162,8 +162,9 @@ void DoTest(const CScript& scriptPubKey, const CScript& scriptSig, const CScript
         flags |= SCRIPT_VERIFY_P2SH;
         flags |= SCRIPT_VERIFY_WITNESS;
     }
+
     if(flags & SCRIPT_VERIFY_STRICTENC) {
-        flags |= SCRIPT_ENABLE_SIGHASH_FORKID;
+    	flags |= SCRIPT_ENABLE_SIGHASH_FORKID;
     }
 
     ScriptError err;
@@ -375,7 +376,7 @@ public:
             	sig_nhashtype |= SIGHASH_FORKID;
                 break;
             case REPLAY_INCORRECT_FORKID:
-            	sig_nhashtype |= ~(SIGHASH_FORKID | SCRIPT_VERIFY_STRICTENC);
+            	sig_nhashtype |= ~(SIGHASH_FORKID | SIGHASH_NONE);
                 break;
         }
 
