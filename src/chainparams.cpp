@@ -385,7 +385,7 @@ public:
         nBitcoinDefaultPort = 18444;
         nPruneAfterHeight = 1000;
 
-        const size_t N = 200, K = 9;
+        const size_t N = 48, K = 5;
         BOOST_STATIC_ASSERT(equihash_parameters_acceptable(N, K));
         nEquihashN = N;
         nEquihashK = K;

@@ -1259,7 +1259,7 @@ class SegWitTest(BitcoinTestFramework):
 
         # Test each hashtype
         prev_utxo = UTXO(tx.sha256, 0, tx.vout[0].nValue)
-        for sigflag in [ 0, SIGHASH_ANYONECANPAY, SIGHASH_FORKID, SIGHASH_ANYONECANPAY | SIGHASH_FORKID ]:
+        for sigflag in [ SIGHASH_FORKID, SIGHASH_FORKID|SIGHASH_ANYONECANPAY ]:
             for hashtype in [SIGHASH_ALL, SIGHASH_NONE, SIGHASH_SINGLE]:
                 hashtype |= sigflag
                 block = self.build_next_block()
@@ -1372,7 +1372,7 @@ class SegWitTest(BitcoinTestFramework):
 
         script = GetP2PKHScript(pubkeyhash)
         sig_hash = SegwitVersion1SignatureHash(script, tx2, 0, SIGHASH_ALL|SIGHASH_FORKID, tx.vout[0].nValue)
-        signature = key.sign(sig_hash) + b'\x41' # 0x41 is SIGHASH_ALL|SIGHASH_FORKID
+        signature = key.sign(sig_hash) + b'\x61' # 0x61 is SIGHASH_ALL|SIGHASH_FORKID
 
         # Check that we can't have a scriptSig
         tx2.vin[0].scriptSig = CScript([signature, pubkey])
@@ -1705,7 +1705,7 @@ class SegWitTest(BitcoinTestFramework):
         tx2.vout.append(CTxOut(tx.vout[0].nValue-1000, scriptWSH))
         script = GetP2PKHScript(pubkeyhash)
         sig_hash = SegwitVersion1SignatureHash(script, tx2, 0, SIGHASH_ALL|SIGHASH_FORKID, tx.vout[0].nValue)
-        signature = key.sign(sig_hash) + b'\x41' # 0x41 is SIGHASH_ALL|SIGHASH_FORKID
+        signature = key.sign(sig_hash) + b'\x61' # 0x61 is SIGHASH_ALL|SIGHASH_FORKID
         tx2.wit.vtxinwit.append(CTxInWitness())
         tx2.wit.vtxinwit[0].scriptWitness.stack = [ signature, pubkey ]
         tx2.rehash()
@@ -1759,7 +1759,7 @@ class SegWitTest(BitcoinTestFramework):
         tx5.vin.append(CTxIn(COutPoint(tx4.sha256, 0), b""))
         tx5.vout.append(CTxOut(tx4.vout[0].nValue-1000, CScript([OP_TRUE])))
         sig_hash = SegwitVersion1SignatureHash(scriptPubKey, tx5, 0, SIGHASH_ALL|SIGHASH_FORKID, tx4.vout[0].nValue)
-        signature = key.sign(sig_hash) + b'\x41' # 0x41 is SIGHASH_ALL|SIGHASH_FORKID
+        signature = key.sign(sig_hash) + b'\x61' # 0x61 is SIGHASH_ALL|SIGHASH_FORKID
         tx5.vin[0].scriptSig = CScript([signature, pubkey])
         tx5.rehash()
         # Should pass policy and consensus.
