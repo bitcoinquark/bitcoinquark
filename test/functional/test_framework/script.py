@@ -850,7 +850,7 @@ def SignatureHash(script, txTo, inIdx, hashtype):
     Returns (hash, err) to precisely match the consensus-critical behavior of
     the SIGHASH_SINGLE bug. (inIdx is *not* checked for validity)
     """
-    assert not (hashtype & SIGHASH_FORKID), "BIP143 is mandatory for FORKID enabled transactions." 
+    #assert not (hashtype & SIGHASH_FORKID), "BIP143 is mandatory for FORKID enabled transactions." 
     
     HASH_ONE = b'\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
 
@@ -937,6 +937,6 @@ def SegwitVersion1SignatureHash(script, txTo, inIdx, hashtype, amount):
     ss += struct.pack("<I", txTo.vin[inIdx].nSequence)
     ss += ser_uint256(hashOutputs)
     ss += struct.pack("<i", txTo.nLockTime)
-    ss += struct.pack("<I", hashtype)
+    ss += struct.pack("<I", hashtype | SIGHASH_FORKID)
 
     return hash256(ss)

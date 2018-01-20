@@ -88,8 +88,7 @@ class FullBlockTest(ComparisonTestFramework):
         if (scriptPubKey[0] == OP_TRUE):  # an anyone-can-spend
             tx.vin[0].scriptSig = CScript()
             return
-        sighash = SegwitVersion1SignatureHash(spend_tx.vout[n].scriptPubKey, tx, 0,
-                                              SIGHASH_ALL|SIGHASH_FORKID, spend_tx.vout[n].nValue)
+        (sighash, err) = SignatureHash(spend_tx.vout[n].scriptPubKey, tx, 0, SIGHASH_ALL | SIGHASH_FORKID)
         tx.vin[0].scriptSig = CScript([self.coinbase_key.sign(sighash) + bytes(bytearray([SIGHASH_ALL|SIGHASH_FORKID]))])
 
     def create_and_sign_transaction(self, spend_tx, n, value, script=CScript([OP_TRUE])):
@@ -550,8 +549,7 @@ class FullBlockTest(ComparisonTestFramework):
         numTxes = (MAX_BLOCK_SIGOPS_PER_MB - sigops) // b39_sigops_per_output
         assert_equal(numTxes <= b39_outputs, True)
 
-        lastOutpoint = COutPoint(b40.vtx[1].sha256, 0)
-        lastOutAmount = b40.vtx[1].vout[0].nValue        
+        lastOutpoint = COutPoint(b40.vtx[1].sha256, 0)  
         new_txs = []
         for i in range(1, numTxes+1):
             tx = CTransaction()
@@ -560,16 +558,14 @@ class FullBlockTest(ComparisonTestFramework):
             # second input is corresponding P2SH output from b39
             tx.vin.append(CTxIn(COutPoint(b39.vtx[i].sha256, 0), b''))
             # Note: must pass the redeem_script (not p2sh_script) to the signature hash function
-            sighash = SegwitVersion1SignatureHash(redeem_script, tx, 1, SIGHASH_ALL|SIGHASH_FORKID,
-                                                  lastOutAmount)
+            (sighash, err) = SignatureHash(redeem_script, tx, 1, SIGHASH_ALL|SIGHASH_FORKID)
             sig = self.coinbase_key.sign(sighash) + bytes(bytearray([SIGHASH_ALL|SIGHASH_FORKID]))
             scriptSig = CScript([sig, redeem_script])
 
             tx.vin[1].scriptSig = scriptSig
             tx.rehash()
             new_txs.append(tx)
-            lastOutpoint = COutPoint(tx.sha256, 0)
-            lastOutAmount = tx.vout[0].nValue            
+            lastOutpoint = COutPoint(tx.sha256, 0)      
 
         b40_sigops_to_fill = MAX_BLOCK_SIGOPS_PER_MB - (numTxes * b39_sigops_per_output + sigops) + 1
         tx = CTransaction()

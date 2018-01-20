@@ -1259,9 +1259,10 @@ class SegWitTest(BitcoinTestFramework):
 
         # Test each hashtype
         prev_utxo = UTXO(tx.sha256, 0, tx.vout[0].nValue)
-        for sigflag in [ SIGHASH_FORKID, SIGHASH_FORKID|SIGHASH_ANYONECANPAY ]:
+        for sigflag in [ 0, SIGHASH_ANYONECANPAY ]:
             for hashtype in [SIGHASH_ALL, SIGHASH_NONE, SIGHASH_SINGLE]:
                 hashtype |= sigflag
+                hashtype |= SIGHASH_FORKID
                 block = self.build_next_block()
                 tx = CTransaction()
                 tx.vin.append(CTxIn(COutPoint(prev_utxo.sha256, prev_utxo.n), b""))
@@ -1334,7 +1335,7 @@ class SegWitTest(BitcoinTestFramework):
                 anyonecanpay = 0
                 if random.randint(0, 1):
                     anyonecanpay = SIGHASH_ANYONECANPAY
-                hashtype = random.randint(1, 3) | anyonecanpay
+                hashtype = random.randint(1, 3) | anyonecanpay | SIGHASH_FORKID
                 sign_P2PK_witness_input(witness_program, tx, i, hashtype, temp_utxos[i].nValue, key)
                 if (hashtype == SIGHASH_SINGLE and i >= num_outputs):
                     used_sighash_single_out_of_bounds = True
@@ -1758,7 +1759,7 @@ class SegWitTest(BitcoinTestFramework):
         tx5 = CTransaction()
         tx5.vin.append(CTxIn(COutPoint(tx4.sha256, 0), b""))
         tx5.vout.append(CTxOut(tx4.vout[0].nValue-1000, CScript([OP_TRUE])))
-        sig_hash = SegwitVersion1SignatureHash(scriptPubKey, tx5, 0, SIGHASH_ALL|SIGHASH_FORKID, tx4.vout[0].nValue)
+        (sig_hash, err) = SignatureHash(scriptPubKey, tx5, 0, SIGHASH_ALL|SIGHASH_FORKID)
         signature = key.sign(sig_hash) + b'\x61' # 0x61 is SIGHASH_ALL|SIGHASH_FORKID
         tx5.vin[0].scriptSig = CScript([signature, pubkey])
         tx5.rehash()
