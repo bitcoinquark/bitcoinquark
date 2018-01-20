@@ -370,17 +370,19 @@ public:
     TestBuilder& PushSig(const CKey& key, int nHashType = SIGHASH_ALL, unsigned int lenR = 32, unsigned int lenS = 32, SigVersion sigversion = SIGVERSION_BASE, CAmount amount = 0)
     {
         int sig_nhashtype = nHashType;
+        int forkid = BTQ_FORKID;
 
         switch (replayMode) {
             case REPLAY_NONE:
             	sig_nhashtype |= SIGHASH_FORKID;
                 break;
             case REPLAY_INCORRECT_FORKID:
-            	sig_nhashtype |= ~(SIGHASH_FORKID | SIGHASH_NONE);
+            	forkid ++;
+            	sig_nhashtype |= SIGHASH_FORKID;//~(SIGHASH_FORKID | SIGHASH_NONE);
                 break;
         }
 
-        uint256 hash = SignatureHash(script, spendTx, 0, sig_nhashtype, amount, sigversion, nullptr);
+        uint256 hash = SignatureHash(script, spendTx, 0, sig_nhashtype, amount, sigversion, nullptr, forkid);
         std::vector<unsigned char> vchSig, r, s;
         uint32_t iter = 0;
         do {

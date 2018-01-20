@@ -28,6 +28,8 @@ enum
     SIGHASH_ANYONECANPAY = 0x80,
 };
 
+static const int BTQ_FORKID = 17;
+
 /** Script verification flags */
 enum
 {
@@ -129,7 +131,7 @@ enum SigVersion
     SIGVERSION_WITNESS_V0 = 1,
 };
 
-uint256 SignatureHash(const CScript &scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, const CAmount& amount, SigVersion sigversion, const PrecomputedTransactionData* cache = nullptr);
+uint256 SignatureHash(const CScript &scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, const CAmount& amount, SigVersion sigversion, const PrecomputedTransactionData* cache = nullptr, const int forkid = BTQ_FORKID);
 
 class BaseSignatureChecker
 {

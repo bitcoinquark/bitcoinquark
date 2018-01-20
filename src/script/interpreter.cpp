@@ -1207,8 +1207,12 @@ bool static UsesForkId(uint32_t nHashType) {
     return nHashType & SIGHASH_FORKID;
 }
 
-uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, const CAmount& amount, SigVersion sigversion, const PrecomputedTransactionData* cache)
+uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, const CAmount& amount, SigVersion sigversion, const PrecomputedTransactionData* cache, const int forkid)
 {
+	int nForkHashType = nHashType;
+	if (UsesForkId(nHashType)) {
+		nForkHashType |= forkid << 8;
+	}
 
 	// force new tx with FORKID to use bip143 transaction digest algorithm
 	// see https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki
@@ -1252,7 +1256,7 @@ uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsig
         // Locktime
         ss << txTo.nLockTime;
         // Sighash type
-        ss << nHashType;
+        ss << nForkHashType;
 
         return ss.GetHash();
     }
@@ -1276,7 +1280,7 @@ uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsig
 
     // Serialize and hash
     CHashWriter ss(SER_GETHASH, 0);
-    ss << txTmp << nHashType;
+    ss << txTmp << nForkHashType;
     return ss.GetHash();
 }
 
