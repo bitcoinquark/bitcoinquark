@@ -273,7 +273,7 @@ then
 	    echo "Compiling ${VERSION} Linux"
 	    echo ""
 	    ./bin/gbuild -j ${proc} -m ${mem} --commit bitcoin=${COMMIT} --url bitcoin=${url} ../bitcoin/contrib/gitian-descriptors/gitian-linux.yml
-	    ./bin/gsign -p $signProg --signer $SIGNER --release ${VERSION}-linux --destination ../gitian.sigs/ ../bitcoin/contrib/gitian-descriptors/gitian-linux.yml
+	    ./bin/gsign -p "$signProg" --signer $SIGNER --release ${VERSION}-linux --destination ../gitian.sigs/ ../bitcoin/contrib/gitian-descriptors/gitian-linux.yml
 	    mv build/out/bitcoinquark-*.tar.gz build/out/src/bitcoinquark-*.tar.gz ../bitcoin-binaries/${VERSION}
 	fi
 	# Windows
@@ -283,7 +283,7 @@ then
 	    echo "Compiling ${VERSION} Windows"
 	    echo ""
 	    ./bin/gbuild -j ${proc} -m ${mem} --commit bitcoin=${COMMIT} --url bitcoin=${url} ../bitcoin/contrib/gitian-descriptors/gitian-win.yml
-	    ./bin/gsign -p $signProg --signer $SIGNER --release ${VERSION}-win-unsigned --destination ../gitian.sigs/ ../bitcoin/contrib/gitian-descriptors/gitian-win.yml
+	    ./bin/gsign -p "$signProg" --signer $SIGNER --release ${VERSION}-win-unsigned --destination ../gitian.sigs/ ../bitcoin/contrib/gitian-descriptors/gitian-win.yml
 	    mv build/out/bitcoinquark-*-win-unsigned.tar.gz inputs/bitcoinquark-win-unsigned.tar.gz
 	    mv build/out/bitcoinquark-*.zip build/out/bitcoinquark-*.exe ../bitcoin-binaries/${VERSION}
 	fi
@@ -294,7 +294,7 @@ then
 	    echo "Compiling ${VERSION} Mac OSX"
 	    echo ""
 	    ./bin/gbuild -j ${proc} -m ${mem} --commit bitcoin=${COMMIT} --url bitcoin=${url} ../bitcoin/contrib/gitian-descriptors/gitian-osx.yml
-	    ./bin/gsign -p $signProg --signer $SIGNER --release ${VERSION}-osx-unsigned --destination ../gitian.sigs/ ../bitcoin/contrib/gitian-descriptors/gitian-osx.yml
+	    ./bin/gsign -p "$signProg" --signer $SIGNER --release ${VERSION}-osx-unsigned --destination ../gitian.sigs/ ../bitcoin/contrib/gitian-descriptors/gitian-osx.yml
 	    mv build/out/bitcoinquark-*-osx-unsigned.tar.gz inputs/bitcoinquark-osx-unsigned.tar.gz
 	    mv build/out/bitcoinquark-*.tar.gz build/out/bitcoinquark-*.dmg ../bitcoin-binaries/${VERSION}
 	fi
@@ -359,7 +359,7 @@ then
 	    echo "Signing ${VERSION} Windows"
 	    echo ""
 	    ./bin/gbuild -i --commit signature=${COMMIT} ../bitcoin/contrib/gitian-descriptors/gitian-win-signer.yml
-	    ./bin/gsign -p $signProg --signer $SIGNER --release ${VERSION}-win-signed --destination ../gitian.sigs/ ../bitcoin/contrib/gitian-descriptors/gitian-win-signer.yml
+	    ./bin/gsign -p "$signProg" --signer $SIGNER --release ${VERSION}-win-signed --destination ../gitian.sigs/ ../bitcoin/contrib/gitian-descriptors/gitian-win-signer.yml
 	    mv build/out/bitcoinquark-*win64-setup.exe ../bitcoin-binaries/${VERSION}
 	    mv build/out/bitcoinquark-*win32-setup.exe ../bitcoin-binaries/${VERSION}
 	fi
@@ -370,7 +370,7 @@ then
 	    echo "Signing ${VERSION} Mac OSX"
 	    echo ""
 	    ./bin/gbuild -i --commit signature=${COMMIT} ../bitcoin/contrib/gitian-descriptors/gitian-osx-signer.yml
-	    ./bin/gsign -p $signProg --signer $SIGNER --release ${VERSION}-osx-signed --destination ../gitian.sigs/ ../bitcoin/contrib/gitian-descriptors/gitian-osx-signer.yml
+	    ./bin/gsign -p "$signProg" --signer $SIGNER --release ${VERSION}-osx-signed --destination ../gitian.sigs/ ../bitcoin/contrib/gitian-descriptors/gitian-osx-signer.yml
 	    mv build/out/bitcoinquark-osx-signed.dmg ../bitcoin-binaries/${VERSION}/bitcoinquark-${VERSION}-osx.dmg
 	fi
 	popd
