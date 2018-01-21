@@ -160,14 +160,6 @@ public:
         // bitcoinquark dnsseed
         vSeeds.emplace_back("dnsseed1.bitcoinquark.org", true);
         vSeeds.emplace_back("dnsseed2.bitcoinquark.org", true);
-        // bitcoin dnsseed used by bootstrap=1 mode
-        // Note that of those with the service bits flag, most only support a subset of possible options
-        vSeeds.emplace_back("seed.bitcoin.sipa.be", true); // Pieter Wuille, only supports x1, x5, x9, and xd
-        vSeeds.emplace_back("dnsseed.bluematt.me", true); // Matt Corallo, only supports x9
-        vSeeds.emplace_back("dnsseed.bitcoin.dashjr.org", false); // Luke Dashjr
-        vSeeds.emplace_back("seed.bitcoinstats.com", true); // Christian Decker, supports x1 - xf
-        vSeeds.emplace_back("seed.bitcoin.jonasschnelli.ch", true); // Jonas Schnelli, only supports x1, x5, x9, and xd
-        vSeeds.emplace_back("seed.btc.petertodd.org", true); // Peter Todd, only supports x1, x5, x9, and xd
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,0);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,5);
@@ -289,13 +281,9 @@ public:
         vFixedSeeds.clear();
         vSeeds.clear();
         // bitcoinquark dnsseed
+        vSeeds.emplace_back("mike-quark.tpddns.cn", true);
         vSeeds.emplace_back("testnet-seed1.bitcoinquark.org", true);
         vSeeds.emplace_back("testnet-seed2.bitcoinquark.org", true);
-        // bitcoin dnsseed used by bootstrap=1 mode
-        // nodes with support for servicebits filtering should be at the top
-        vSeeds.emplace_back("testnet-seed.bitcoin.jonasschnelli.ch", true);
-        vSeeds.emplace_back("seed.tbtc.petertodd.org", true);
-        vSeeds.emplace_back("testnet-seed.bluematt.me", false);
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,111);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,196);
