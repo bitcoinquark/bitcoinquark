@@ -1,5 +1,5 @@
 ---
-name: "bitcoinquark-win-0.15"
+name: "bitcoinquark-win-0.16"
 enable_cache: true
 suites:
 - "trusty"
