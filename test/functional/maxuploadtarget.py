@@ -35,7 +35,7 @@ class MaxUploadTest(BitcoinTestFramework):
     def set_test_params(self):
         self.setup_clean_chain = True
         self.num_nodes = 1
-        self.extra_args = [["-maxuploadtarget=800", "-blockmaxsize=999000"]]
+        self.extra_args = [["-maxuploadtarget=1600"]]
 
         # Cache for utxos, as the listunspent may take a long time later in the test
         self.utxo_cache = []
@@ -73,7 +73,7 @@ class MaxUploadTest(BitcoinTestFramework):
         big_old_block = self.nodes[0].getbestblockhash()
         old_block_size = self.nodes[0].getblock(big_old_block, True)['size']
         big_old_block = int(big_old_block, 16)
-
+        
         # Advance to two days ago
         self.nodes[0].setmocktime(int(time.time()) - 2*60*60*24)
 
@@ -90,13 +90,13 @@ class MaxUploadTest(BitcoinTestFramework):
         getdata_request = msg_getdata()
         getdata_request.inv.append(CInv(2, big_old_block))
 
-        max_bytes_per_day = 800*1024*1024
-        daily_buffer = 144 * 4000000
+        max_bytes_per_day = 2*800*1024*1024
+        daily_buffer = 144 * 8000000
         max_bytes_available = max_bytes_per_day - daily_buffer
         success_count = max_bytes_available // old_block_size
 
-        # 576MB will be reserved for relaying new blocks, so expect this to
-        # succeed for ~235 tries.
+        # 1152MB will be reserved for relaying new blocks, so expect this to
+        # succeed for ~555 tries.
         for i in range(success_count):
             test_nodes[0].send_message(getdata_request)
             test_nodes[0].sync_with_ping()
@@ -113,9 +113,9 @@ class MaxUploadTest(BitcoinTestFramework):
 
         # Requesting the current block on test_nodes[1] should succeed indefinitely,
         # even when over the max upload target.
-        # We'll try 800 times
+        # We'll try 1600 times
         getdata_request.inv = [CInv(2, big_new_block)]
-        for i in range(800):
+        for i in range(1600):
             test_nodes[1].send_message(getdata_request)
             test_nodes[1].sync_with_ping()
             assert_equal(test_nodes[1].block_receive_map[big_new_block], i+1)
@@ -147,7 +147,7 @@ class MaxUploadTest(BitcoinTestFramework):
         #stop and start node 0 with 1MB maxuploadtarget, whitelist 127.0.0.1
         self.log.info("Restarting nodes with -whitelist=127.0.0.1")
         self.stop_node(0)
-        self.start_node(0, ["-whitelist=127.0.0.1", "-maxuploadtarget=1", "-blockmaxsize=999000"])
+        self.start_node(0, ["-whitelist=127.0.0.1", "-maxuploadtarget=1"])
 
         #recreate/reconnect a test node
         test_nodes = [TestNode()]
