@@ -158,8 +158,8 @@ public:
         assert(genesis.hashMerkleRoot == uint256S("0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));
 
         // bitcoinquark dnsseed
-        vSeeds.emplace_back("dnsseed1.bitcoinquark.org", false);
-        vSeeds.emplace_back("dnsseed2.bitcoinquark.org", false);
+        vSeeds.emplace_back("dnsseed1.bitcoinquark.cc", true);
+        vSeeds.emplace_back("dnsseed2.bitcoinquark.cc", true);
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,0);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,5);
@@ -281,8 +281,8 @@ public:
         vFixedSeeds.clear();
         vSeeds.clear();
         // bitcoinquark dnsseed
-        vSeeds.emplace_back("testnet-seed1.bitcoinquark.org", false);
-        vSeeds.emplace_back("testnet-seed2.bitcoinquark.org", false);
+        vSeeds.emplace_back("testnet-seed1.bitcoinquark.cc", true);
+        vSeeds.emplace_back("testnet-seed2.bitcoinquark.cc", true);
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,111);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,196);
