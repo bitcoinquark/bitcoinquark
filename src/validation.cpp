@@ -4344,7 +4344,7 @@ bool LoadBlockIndex(const CChainParams& chainparams)
 
         // Use the provided setting for -timestampindex in the new database
         fTimestampIndex = gArgs.GetBoolArg("-timestampindex", DEFAULT_TIMESTAMPINDEX);
-        pblocktree->WriteFlag("timestampindex", DEFAULT_SPENTINDEX);
+        pblocktree->WriteFlag("timestampindex", fTimestampIndex);
 
         fSpentIndex = gArgs.GetBoolArg("-spentindex", false);
         pblocktree->WriteFlag("spentindex", fSpentIndex);
