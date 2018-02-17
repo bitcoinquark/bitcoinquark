@@ -40,28 +40,26 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
 	if(postfork) {
 
 		uint32_t nBits = pindexLast->nBits;
-		if (nBits == nProofOfWorkLimit) {
-		   return nProofOfWorkLimit;
-		}
+		if (nBits != nProofOfWorkLimit) {
+		    const CBlockIndex *pindex6 = pindexLast->GetAncestor(nHeight - 7);
+		    assert(pindex6);
+		    int64_t mtp6blocks = pindexLast->GetMedianTimePast() - pindex6->GetMedianTimePast();
 
-		const CBlockIndex *pindex6 = pindexLast->GetAncestor(nHeight - 7);
-		assert(pindex6);
-		int64_t mtp6blocks = pindexLast->GetMedianTimePast() - pindex6->GetMedianTimePast();
+		    if (mtp6blocks > 12 * 3600) {
 
-		if (mtp6blocks > 12 * 3600) {
+			    // If producing the last 6 block took more than 12h, increase the difficulty
+			    // target by 1/4 (which reduces the difficulty by 20%). This ensure the
+			    // chain do not get stuck in case we lose hashrate abruptly.
+			    arith_uint256 nPow;
+			    nPow.SetCompact(nBits);
+			    nPow += (nPow >> 2);
 
-			// If producing the last 6 block took more than 12h, increase the difficulty
-			// target by 1/4 (which reduces the difficulty by 20%). This ensure the
-			// chain do not get stuck in case we lose hashrate abruptly.
-			arith_uint256 nPow;
-			nPow.SetCompact(nBits);
-			nPow += (nPow >> 2);
+			    // Make sure we do not go bellow allowed values.
+			    const arith_uint256 bnPowLimit = UintToArith256(params.PowLimit(postfork));
+			    if (nPow > bnPowLimit) nPow = bnPowLimit;
 
-			// Make sure we do not go bellow allowed values.
-			const arith_uint256 bnPowLimit = UintToArith256(params.PowLimit(postfork));
-			if (nPow > bnPowLimit) nPow = bnPowLimit;
-
-			return nPow.GetCompact();
+			    return nPow.GetCompact();
+		    }
 		}
 	}
 

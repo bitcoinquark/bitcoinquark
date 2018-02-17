@@ -102,8 +102,8 @@ public:
         consensus.powLimitLegacy = uint256S("00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.nPowAveragingWindow = 17;
 		assert(maxUint/UintToArith256(consensus.powLimit) >= consensus.nPowAveragingWindow);
-		consensus.nPowMaxAdjustDown = 20; // 20% adjustment down
-		consensus.nPowMaxAdjustUp = 10; // 10% adjustment up
+		consensus.nPowMaxAdjustDown = 32; // 32% adjustment down
+		consensus.nPowMaxAdjustUp = 16; // 16% adjustment up
 		consensus.nPowTargetTimespanLegacy = 14 * 24 * 60 * 60; // 10 minutes
         consensus.nPowTargetSpacing = 10 * 60;
         consensus.fPowAllowMinDifficultyBlocks = false;
@@ -336,8 +336,8 @@ public:
         consensus.powLimitStart = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.powLimitLegacy = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.nPowAveragingWindow = 17;
-        consensus.nPowMaxAdjustDown = 20; // 20% adjustment down
-        consensus.nPowMaxAdjustUp = 10; // 10% adjustment up
+        consensus.nPowMaxAdjustDown = 0; // Turn off adjustment down
+        consensus.nPowMaxAdjustUp = 0; // Turn off adjustment up
         consensus.nPowTargetTimespanLegacy = 14 * 24 * 60 * 60; // two weeks
         consensus.nPowTargetSpacing = 10 * 60;
         consensus.fPowAllowMinDifficultyBlocks = true;
