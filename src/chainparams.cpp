@@ -229,7 +229,7 @@ public:
         consensus.nPowAveragingWindow = 17;
         assert(maxUint/UintToArith256(consensus.powLimit) >= consensus.nPowAveragingWindow);
         consensus.nPowMaxAdjustDown = 32; // 32% adjustment down
-        consensus.nPowMaxAdjustUp = 16; // 10% adjustment up
+        consensus.nPowMaxAdjustUp = 16; // 16% adjustment up
         consensus.nPowTargetTimespanLegacy = 14 * 24 * 60 * 60;; // 10 minutes
         consensus.nPowTargetSpacing = 10 * 60;
         consensus.fPowAllowMinDifficultyBlocks = true;
