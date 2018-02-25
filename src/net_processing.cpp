@@ -2573,6 +2573,30 @@ bool static ProcessMessage(const Config& config, CNode* pfrom, const std::string
             vRecv >> headers[n];
             ReadCompactSize(vRecv); // ignore tx count; assume it is 0.
         }
+
+        if(pindexBestHeader && !headers.empty()) {
+
+            LOCK(cs_main);
+
+            // bitcoin quark normal or bootstrap node
+            bool bitcoin_quark_node = pfrom->fUsesQuarkMagic
+                    || ((pfrom->nServicesExpected & NODE_BITCOIN_QUARK) && IsBitcoinQuarkVersion(headers.back().nVersion));
+
+            // non-bitcoinquark node
+            if(!bitcoin_quark_node) {
+               // Only read bitcoin blocks before fork height
+               int blocks_from_bitcoin = Params().GetConsensus().BTQHeight - 1 - pindexBestHeader->nHeight;
+               if(blocks_from_bitcoin >=0 &&  blocks_from_bitcoin < nCount) {
+
+                   if(chainActive.Height() < (Params().GetConsensus().BTQHeight - 1)) {
+                       UpdateBlockAvailability(pfrom->GetId(), headers[blocks_from_bitcoin].GetHash());
+                   }
+
+                   headers.resize(blocks_from_bitcoin);
+               }
+            }
+        }
+
         vRecv.SetVersion(original_version);
 
         // Headers received via a HEADERS message should be valid, and reflect
