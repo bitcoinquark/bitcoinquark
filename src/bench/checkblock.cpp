@@ -1,17 +1,16 @@
-// Copyright (c) 2016 The Bitcoin Core developers
+// Copyright (c) 2016-2017 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "bench.h"
+#include <bench/bench.h>
 
-#include "chainparams.h"
-#include "config.h"
-#include "validation.h"
-#include "streams.h"
-#include "consensus/validation.h"
+#include <chainparams.h>
+#include <validation.h>
+#include <streams.h>
+#include <consensus/validation.h>
 
 namespace block_bench {
-#include "bench/data/block413567.raw.h"
+#include <bench/data/block413567.raw.h>
 } // namespace block_bench
 
 // These are the two major time-sinks which happen after we have fully received
@@ -41,7 +40,6 @@ static void DeserializeAndCheckBlockTest(benchmark::State& state)
     char a = '\0';
     stream.write(&a, 1); // Prevent compaction
 
-    const Config& config = GetConfig();
     const auto chainParams = CreateChainParams(CBaseChainParams::MAIN);
 
     while (state.KeepRunning()) {
@@ -50,9 +48,9 @@ static void DeserializeAndCheckBlockTest(benchmark::State& state)
         assert(stream.Rewind(sizeof(block_bench::block413567)));
 
         CValidationState validationState;
-        assert(CheckBlock(config, block, validationState, chainParams->GetConsensus()));
+        assert(CheckBlock(block, validationState, chainParams->GetConsensus()));
     }
 }
 
-BENCHMARK(DeserializeBlockTest);
-BENCHMARK(DeserializeAndCheckBlockTest);
+BENCHMARK(DeserializeBlockTest, 130);
+BENCHMARK(DeserializeAndCheckBlockTest, 160);

@@ -1,16 +1,14 @@
 // Copyright (c) 2010 Satoshi Nakamoto
-// Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2009-2017 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "rpc/client.h"
-#include "rpc/protocol.h"
-#include "util.h"
+#include <rpc/client.h>
+#include <rpc/protocol.h>
+#include <util.h>
 
 #include <set>
 #include <stdint.h>
-
-#include <univalue.h>
 
 class CRPCConvertParam
 {
@@ -96,11 +94,16 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "createrawtransaction", 1, "outputs" },
     { "createrawtransaction", 2, "locktime" },
     { "createrawtransaction", 3, "replaceable" },
+    { "decoderawtransaction", 1, "iswitness" },
     { "signrawtransaction", 1, "prevtxs" },
     { "signrawtransaction", 2, "privkeys" },
+    { "signrawtransactionwithkey", 1, "privkeys" },
+    { "signrawtransactionwithkey", 2, "prevtxs" },
+    { "signrawtransactionwithwallet", 1, "prevtxs" },
     { "sendrawtransaction", 1, "allowhighfees" },
     { "combinerawtransaction", 0, "txs" },
     { "fundrawtransaction", 1, "options" },
+    { "fundrawtransaction", 2, "iswitness" },
     { "gettxout", 1, "n" },
     { "gettxout", 2, "include_mempool" },
     { "gettxoutproof", 0, "txids" },
@@ -117,7 +120,6 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "pruneblockchain", 0, "height" },
     { "keypoolrefill", 0, "newsize" },
     { "getrawmempool", 0, "verbose" },
-    { "estimatefee", 0, "nblocks" },
     { "estimatesmartfee", 0, "conf_target" },
     { "estimaterawfee", 0, "conf_target" },
     { "estimaterawfee", 1, "threshold" },
@@ -132,15 +134,16 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "logging", 0, "include" },
     { "logging", 1, "exclude" },
     { "disconnectnode", 1, "nodeid" },
+    { "addwitnessaddress", 1, "p2sh" },
     { "getblockhashes", 0, "high" },
     { "getblockhashes", 1, "low" },
     { "getspentinfo", 0, "txid"},
-	{ "getspentinfo", 1, "index"},
+    { "getspentinfo", 1, "index"},
     { "getaddresstxids", 0, "addresses"},
     { "getaddressbalance", 0, "addresses"},
     { "getaddressdeltas", 0, "addresses"},
-	{ "getaddressdeltas", 1, "start"},
-	{ "getaddressdeltas", 2, "end"},
+    { "getaddressdeltas", 1, "start"},
+    { "getaddressdeltas", 2, "end"},
     { "getaddressutxos", 0, "addresses"},
     { "getaddressmempool", 0, "addresses"},
     // Echo with conversion (For testing only)
@@ -154,6 +157,8 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "echojson", 7, "arg7" },
     { "echojson", 8, "arg8" },
     { "echojson", 9, "arg9" },
+    { "rescanblockchain", 0, "start_height"},
+    { "rescanblockchain", 1, "stop_height"},
 };
 
 class CRPCConvertTable
@@ -224,7 +229,7 @@ UniValue RPCConvertNamedValues(const std::string &strMethod, const std::vector<s
     UniValue params(UniValue::VOBJ);
 
     for (const std::string &s: strParams) {
-        size_t pos = s.find("=");
+        size_t pos = s.find('=');
         if (pos == std::string::npos) {
             throw(std::runtime_error("No '=' in named argument '"+s+"', this needs to be present for every argument (even if it is empty)"));
         }

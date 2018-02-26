@@ -1,14 +1,14 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2009-2017 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BITCOIN_NET_PROCESSING_H
 #define BITCOIN_NET_PROCESSING_H
 
-#include "net.h"
-#include "validationinterface.h"
-#include "consensus/params.h"
+#include <net.h>
+#include <validationinterface.h>
+#include <consensus/params.h>
 
 class Config;
 
@@ -56,7 +56,6 @@ public:
     bool ProcessMessages(const Config &config, CNode* pfrom, std::atomic<bool>& interrupt) override;
     /**
     * Send queued protocol messages to be sent to a give node.
-    *
     * @param[in]   config          The global config
     * @param[in]   pto             The node which we are sending messages to.
     * @param[in]   interrupt       Interrupt condition for processing threads
@@ -82,6 +81,6 @@ struct CNodeStateStats {
 /** Get statistics from node state */
 bool GetNodeStateStats(NodeId nodeid, CNodeStateStats &stats);
 /** Increase a node's misbehavior score. */
-void Misbehaving(NodeId nodeid, int howmuch);
+void Misbehaving(NodeId nodeid, int howmuch, const std::string& message="");
 
 #endif // BITCOIN_NET_PROCESSING_H
