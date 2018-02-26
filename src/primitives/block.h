@@ -9,7 +9,8 @@
 #include <arith_uint256.h>
 #include <primitives/transaction.h>
 #include <serialize.h>
-#include <uint256.h>#include <version.h>
+#include <uint256.h>
+#include <version.h>
 #include <string.h>
 
 namespace Consensus {

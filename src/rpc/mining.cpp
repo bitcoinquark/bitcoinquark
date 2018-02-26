@@ -11,6 +11,7 @@
 #include <consensus/consensus.h>
 #include <consensus/params.h>
 #include <consensus/validation.h>
+#include <crypto/equihash.h>
 #include <core_io.h>
 #include <init.h>
 #include <validation.h>
@@ -1036,7 +1037,7 @@ static const CRPCCommand commands[] =
     { "mining",             "prioritisetransaction",  &prioritisetransaction,  {"txid","dummy","fee_delta"} },
     { "mining",             "getblocktemplate",       &getblocktemplate,       {"template_request"} },
     { "mining",             "submitblock",            &submitblock,            {"hexdata","dummy"} },
-	{ "mining",             "getblocksubsidy",        &getblocksubsidy,        true,  {"height"} },
+	{ "mining",             "getblocksubsidy",        &getblocksubsidy,        {"height"} },
 
 
     { "generating",         "generatetoaddress",      &generatetoaddress,      {"nblocks","address","maxtries"} },

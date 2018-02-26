@@ -1072,7 +1072,7 @@ void static ProcessGetBlockData(const Config &config, CNode* pfrom, const Consen
     } // release cs_main before calling ActivateBestChain
     if (need_activate_chain) {
         CValidationState dummy;
-        ActivateBestChain(dummy, Params(), a_recent_block);
+        ActivateBestChain(config, dummy, Params(), a_recent_block);
     }
 
     LOCK(cs_main);
@@ -1182,7 +1182,7 @@ void static ProcessGetBlockData(const Config &config, CNode* pfrom, const Consen
     }
 }
 
-void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParams, CConnman* connman, const std::atomic<bool>& interruptMsgProc)
+void static ProcessGetData(const Config &config, CNode* pfrom, const Consensus::Params& consensusParams, CConnman* connman, const std::atomic<bool>& interruptMsgProc)
 {
     AssertLockNotHeld(cs_main);
 
@@ -1231,7 +1231,7 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
         const CInv &inv = *it;
         if (inv.type == MSG_BLOCK || inv.type == MSG_FILTERED_BLOCK || inv.type == MSG_CMPCT_BLOCK || inv.type == MSG_WITNESS_BLOCK) {
             it++;
-            ProcessGetBlockData(pfrom, consensusParams, inv, connman, interruptMsgProc);
+            ProcessGetBlockData(config, pfrom, consensusParams, inv, connman, interruptMsgProc);
         }
     }
 
@@ -1273,7 +1273,7 @@ inline void static SendBlockTransactions(const CBlock& block, const BlockTransac
     connman->PushMessage(pfrom, msgMaker.Make(nSendFlags, NetMsgType::BLOCKTXN, resp));
 }
 
-bool static ProcessHeadersMessage(CNode *pfrom, CConnman *connman, const std::vector<CBlockHeader>& headers, const CChainParams& chainparams, bool punish_duplicate_invalid)
+bool static ProcessHeadersMessage(const Config& config, CNode *pfrom, CConnman *connman, const std::vector<CBlockHeader>& headers, const CChainParams& chainparams, bool punish_duplicate_invalid)
 {
     const CNetMsgMaker msgMaker(pfrom->GetSendVersion());
     size_t nCount = headers.size();
@@ -1442,7 +1442,7 @@ bool static ProcessHeadersMessage(CNode *pfrom, CConnman *connman, const std::ve
                     }
                     uint32_t nFetchFlags = GetFetchFlags(pfrom);
                     vGetData.push_back(CInv(MSG_BLOCK | nFetchFlags, pindex->GetBlockHash()));
-                    MarkBlockAsInFlight(pfrom->GetId(), pindex->GetBlockHash(), pindex);
+                    MarkBlockAsInFlight(config, pfrom->GetId(), pindex->GetBlockHash(), pindex);
                     LogPrint(BCLog::NET, "Requesting block %s from  peer=%d\n",
                             pindex->GetBlockHash().ToString(), pfrom->GetId());
                 }
@@ -2635,13 +2635,13 @@ bool static ProcessMessage(const Config& config, CNode* pfrom, const std::string
 
             // bitcoin quark normal or bootstrap node
             bool bitcoin_quark_node = pfrom->fUsesQuarkMagic
-                    || ((pfrom->nServicesExpected & NODE_BITCOIN_QUARK) && IsBitcoinQuarkVersion(headers.back().nVersion));
+                    || ((pfrom->nServices & NODE_BITCOIN_QUARK) && IsBitcoinQuarkVersion(headers.back().nVersion));
 
             // non-bitcoinquark node
             if(!bitcoin_quark_node) {
                // Only read bitcoin blocks before fork height
                int blocks_from_bitcoin = Params().GetConsensus().BTQHeight - 1 - pindexBestHeader->nHeight;
-               if(blocks_from_bitcoin >=0 &&  blocks_from_bitcoin < nCount) {
+               if(blocks_from_bitcoin >= 0 &&  blocks_from_bitcoin < (int)nCount) {
 
                    if(chainActive.Height() < (Params().GetConsensus().BTQHeight - 1)) {
                        UpdateBlockAvailability(pfrom->GetId(), headers[blocks_from_bitcoin].GetHash());

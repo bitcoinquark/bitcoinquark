@@ -17,6 +17,7 @@
 #include <rpc/server.h>
 #include <rpc/util.h>
 #include <timedata.h>
+#include <txmempool.h>
 #include <util.h>
 #include <utilstrencodings.h>
 #ifdef ENABLE_WALLET
@@ -403,11 +404,11 @@ UniValue logging(const JSONRPCRequest& request)
     }
 
     uint32_t originalLogCategories = logCategories;
-    if (request.params[0].isArray()) {
+    if (request.params.size() > 0 && request.params[0].isArray()) {
         logCategories |= getCategoryMask(request.params[0]);
     }
 
-    if (request.params[1].isArray()) {
+    if (request.params.size() > 1 && request.params[1].isArray()) {
         logCategories &= ~getCategoryMask(request.params[1]);
     }
 
@@ -887,17 +888,17 @@ static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         argNames
   //  --------------------- ------------------------  -----------------------  ----------
 	/* Address index */
-	{ "addressindex",       "getaddressmempool",      &getaddressmempool,      true,  {"addresses"} },
-	{ "addressindex",       "getaddressutxos",        &getaddressutxos,        false, {"addresses"} },
-	{ "addressindex",       "getaddressdeltas",       &getaddressdeltas,       false, {"addresses ","start", "end"} },
-	{ "addressindex",       "getaddresstxids",        &getaddresstxids,        false, {"addresses"} },
-	{ "addressindex",       "getaddressbalance",      &getaddressbalance,      false, {"addresses"} },
-    { "control",            "getmemoryinfo",          &getmemoryinfo,          true,  {"mode"} },
+	{ "addressindex",       "getaddressmempool",      &getaddressmempool,      {"addresses"} },
+	{ "addressindex",       "getaddressutxos",        &getaddressutxos,        {"addresses"} },
+	{ "addressindex",       "getaddressdeltas",       &getaddressdeltas,       {"addresses ","start", "end"} },
+	{ "addressindex",       "getaddresstxids",        &getaddresstxids,        {"addresses"} },
+	{ "addressindex",       "getaddressbalance",      &getaddressbalance,      {"addresses"} },
+    { "control",            "getmemoryinfo",          &getmemoryinfo,          {"mode"} },
     { "control",            "logging",                &logging,                {"include", "exclude"}},
-    { "util",               "validateaddress",        &validateaddress,        true,  {"address"} }, /* uses wallet if enabled */
-    { "util",               "createmultisig",         &createmultisig,         true,  {"nrequired","keys"} },
-    { "util",               "verifymessage",          &verifymessage,          true,  {"address","signature","message"} },
-    { "util",               "signmessagewithprivkey", &signmessagewithprivkey, true,  {"privkey","message"} },
+    { "util",               "validateaddress",        &validateaddress,        {"address"} }, /* uses wallet if enabled */
+    { "util",               "createmultisig",         &createmultisig,         {"nrequired","keys"} },
+    { "util",               "verifymessage",          &verifymessage,          {"address","signature","message"} },
+    { "util",               "signmessagewithprivkey", &signmessagewithprivkey, {"privkey","message"} },
 
     /* Not shown in help */
     { "hidden",             "setmocktime",            &setmocktime,            {"timestamp"}},

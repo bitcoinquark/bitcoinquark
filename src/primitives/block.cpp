@@ -10,7 +10,8 @@
 #include <utilstrencodings.h>
 #include <chainparams.h>
 #include <consensus/params.h>
-#include <crypto/common.h>#include <script/script.h>
+#include <crypto/common.h>
+#include <script/script.h>
 
 uint256 CBlockHeader::GetHash(const Consensus::Params& params) const
 {
@@ -33,7 +34,7 @@ uint256 CBlockHeader::GetHash() const
 
 bool CBlockHeader::IsBitcoinQuark(int heightOrTime) const
 {
-	if(heightOrTime >= LOCKTIME_THRESHOLD) {
+	if(heightOrTime >= (int)LOCKTIME_THRESHOLD) {
 		// Is a legacy time field
 		return false;
 	}
