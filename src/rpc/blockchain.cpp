@@ -1820,7 +1820,7 @@ static const CRPCCommand commands[] =
     { "blockchain",         "getbestblockhash",       &getbestblockhash,       {} },
     { "blockchain",         "getblockcount",          &getblockcount,          {} },
     { "blockchain",         "getblock",               &getblock,               {"blockhash","verbosity|verbose","legacy"} },
-	{ "blockchain",         "getblockhashes",         &getblockhashes,         {} },
+	{ "blockchain",         "getblockhashes",         &getblockhashes,         {"high", "low"} },
     { "blockchain",         "getblockhash",           &getblockhash,           {"height"} },
     { "blockchain",         "getblockheader",         &getblockheader,         {"blockhash","verbose","legacy"} },
     { "blockchain",         "getchaintips",           &getchaintips,           {} },
