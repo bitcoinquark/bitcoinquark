@@ -890,7 +890,7 @@ static const CRPCCommand commands[] =
 	/* Address index */
 	{ "addressindex",       "getaddressmempool",      &getaddressmempool,      {"addresses"} },
 	{ "addressindex",       "getaddressutxos",        &getaddressutxos,        {"addresses"} },
-	{ "addressindex",       "getaddressdeltas",       &getaddressdeltas,       {"addresses ","start", "end"} },
+	{ "addressindex",       "getaddressdeltas",       &getaddressdeltas,       {"addresses","start", "end"} },
 	{ "addressindex",       "getaddresstxids",        &getaddresstxids,        {"addresses"} },
 	{ "addressindex",       "getaddressbalance",      &getaddressbalance,      {"addresses"} },
     { "control",            "getmemoryinfo",          &getmemoryinfo,          {"mode"} },
