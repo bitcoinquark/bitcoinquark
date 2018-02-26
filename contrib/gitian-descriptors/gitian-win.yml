@@ -1,6 +1,5 @@
 ---
-name: "bitcoinquark-win-0.16"
-enable_cache: true
+name: "bitcoinquark-win-0.16"enable_cache: true
 suites:
 - "trusty"
 architectures:

@@ -1,15 +1,18 @@
-Bitcoin Core version *0.15.1* is now available from:
+(note: this is a temporary file, to be added-to by anybody, and moved to
+release-notes at release time)
 
-  <https://bitcoincore.org/bin/bitcoin-core-0.15.1/>
+Bitcoin Core version *0.15.0* is now available from:
+Bitcoin Core version *version* is now available from:
 
-or
+  <https://bitcoin.org/bin/bitcoin-core-0.15.0/>
+  <https://bitcoincore.org/bin/bitcoin-core-*version*/>
 
-  <https://bitcoin.org/bin/bitcoin-core-0.15.1/>
+This is a new major version release, including new features, various bugfixes
+and performance improvements, as well as updated translations.
 
-This is a new minor version release, including various bugfixes and
-performance improvements, as well as updated translations.
-
+Please report bugs using the issue tracker at github:
 Please report bugs using the issue tracker at GitHub:
+
 
   <https://github.com/bitcoin/bitcoin/issues>
 
@@ -22,16 +25,14 @@ How to Upgrade
 
 If you are running an older version, shut it down. Wait until it has completely
 shut down (which might take a few minutes for older versions), then run the 
+installer (on Windows) or just copy over /Applications/Bitcoin-Qt (on Mac)
+shut down (which might take a few minutes for older versions), then run the
 installer (on Windows) or just copy over `/Applications/Bitcoin-Qt` (on Mac)
 or `bitcoind`/`bitcoin-qt` (on Linux).
 
-The first time you run version 0.15.0 or higher, your chainstate database will
-be converted to a new format, which will take anywhere from a few minutes to
-half an hour, depending on the speed of your machine.
-
-The file format of `fee_estimates.dat` changed in version 0.15.0. Hence, a
-downgrade from version 0.15 or upgrade to version 0.15 will cause all fee
-estimates to be discarded.
+The first time you run version 0.15.0, your chainstate database will be converted to a
+new format, which will take anywhere from a few minutes to half an hour,
+depending on the speed of your machine.
 
 Note that the block database format also changed in version 0.8.0 and there is no
 automatic upgrade code from before version 0.8 to version 0.15.0. Upgrading
@@ -58,186 +59,405 @@ the Linux kernel, macOS 10.8+, and Windows Vista and later. Windows XP is not su
 Bitcoin Core should also work on most other Unix-like systems but is not
 frequently tested on them.
 
-
 Notable changes
 ===============
 
-Network fork safety enhancements
---------------------------------
+Performance Improvements
+------------------------
+RPC changes
+------------
 
-A number of changes to the way Bitcoin Core deals with peer connections and invalid blocks
-have been made, as a safety precaution against blockchain forks and misbehaving peers.
-
-- Unrequested blocks with less work than the minimum-chain-work are now no longer processed even
-if they have more work than the tip (a potential issue during IBD where the tip may have low-work).
-This prevents peers wasting the resources of a node. 
-
-- Peers which provide a chain with less work than the minimum-chain-work during IBD will now be disconnected.
-
-- For a given outbound peer, we now check whether their best known block has at least as much work as our tip. If it
-doesn't, and if we still haven't heard about a block with sufficient work after a 20 minute timeout, then we send
-a single getheaders message, and wait 2 more minutes. If after two minutes their best known block has insufficient
-work, we disconnect that peer. We protect 4 of our outbound peers from being disconnected by this logic to prevent
-excessive network topology changes as a result of this algorithm, while still ensuring that we have a reasonable
-number of nodes not known to be on bogus chains.
-
-- Outbound (non-manual) peers that serve us block headers that are already known to be invalid (other than compact
-block announcements, because BIP 152 explicitly permits nodes to relay compact blocks before fully validating them)
-will now be disconnected.
-
-- If the chain tip has not been advanced for over 30 minutes, we now assume the tip may be stale and will try to connect
-to an additional outbound peer. A periodic check ensures that if this extra peer connection is in use, we will disconnect
-the peer that least recently announced a new block.
-
-- The set of all known invalid-themselves blocks (i.e. blocks which we attempted to connect but which were found to be
-invalid) are now tracked and used to check if new headers build on an invalid chain. This ensures that everything that
-descends from an invalid block is marked as such.
+Version 0.15 contains a number of significant performance improvements, which make
+Initial Block Download, startup, transaction and block validation much faster:
+### Low-level changes
 
 
-Miner block size limiting deprecated
-------------------------------------
-
-Though blockmaxweight has been preferred for limiting the size of blocks returned by
-getblocktemplate since 0.13.0, blockmaxsize remained as an option for those who wished
-to limit their block size directly. Using this option resulted in a few UI issues as
-well as non-optimal fee selection and ever-so-slightly worse performance, and has thus
-now been deprecated. Further, the blockmaxsize option is now used only to calculate an
-implied blockmaxweight, instead of limiting block size directly. Any miners who wish
-to limit their blocks by size, instead of by weight, will have to do so manually by
-removing transactions from their block template directly.
+- The chainstate database (which is used for tracking UTXOs) has been changed
+  from a per-transaction model to a per-output model (See [PR 10195](https://github.com/bitcoin/bitcoin/pull/10195)). Advantages of this model
+  are that it:
+    - avoids the CPU overhead of deserializing and serializing the unused outputs;
+    - has more predictable memory usage;
+    - uses simpler code;
+    - is adaptable to various future cache flushing strategies.
+- The `fundrawtransaction` rpc will reject the previously deprecated `reserveChangeKey` option.
 
 
-GUI settings backed up on reset
--------------------------------
 
-The GUI settings will now be written to `guisettings.ini.bak` in the data directory before wiping them when
-the `-resetguisettings` argument is used. This can be used to retroactively troubleshoot issues due to the
-GUI settings.
+  As a result, validating the blockchain during Initial Block Download (IBD) and reindex
+  is ~30-40% faster, uses 10-20% less memory, and flushes to disk far less frequently.
+  The only downside is that the on-disk database is 15% larger. During the conversion from the previous format
+  a few extra gigabytes may be used.
+- Earlier versions experienced a spike in memory usage while flushing UTXO updates to disk.
+  As a result, only half of the available memory was actually used as cache, and the other half was
+  reserved to accommodate flushing. This is no longer the case (See [PR 10148](https://github.com/bitcoin/bitcoin/pull/10148)), and the entirety of
+  the available cache (see `-dbcache`) is now actually used as cache. This reduces the flushing
+  frequency by a factor 2 or more.
+- In previous versions, signature validation for transactions has been cached when the
+  transaction is accepted to the mempool. Version 0.15 extends this to cache the entire script
+  validity (See [PR 10192](https://github.com/bitcoin/bitcoin/pull/10192)). This means that if a transaction in a block has already been accepted to the
+  mempool, the scriptSig does not need to be re-evaluated. Empirical tests show that
+  this results in new block validation being 40-50% faster.
+- LevelDB has been upgraded to version 1.20 (See [PR 10544](https://github.com/bitcoin/bitcoin/pull/10544)). This version contains hardware acceleration for CRC
+  on architectures supporting SSE 4.2. As a result, synchronization and block validation are now faster.
+- SHA256 hashing has been optimized for architectures supporting SSE 4 (See [PR 10182](https://github.com/bitcoin/bitcoin/pull/10182)). SHA256 is around
+  50% faster on supported hardware, which results in around 5% faster IBD and block
+  validation. In version 0.15, SHA256 hardware optimization is disabled in release builds by
+  default, but can be enabled by using `--enable-experimental-asm` when building.
+- Refill of the keypool no longer flushes the wallet between each key which resulted in a ~20x speedup in creating a new wallet. Part of this speedup was used to increase the default keypool to 1000 keys to make recovery more robust. (See [PR 10831](https://github.com/bitcoin/bitcoin/pull/10831)).
 
+Fee Estimation Improvements
+---------------------------
 
-Duplicate wallets disallowed
+Fee estimation has been significantly improved in version 0.15, with more accurate fee estimates used by the wallet and a wider range of options for advanced users of the `estimatesmartfee` and `estimaterawfee` RPCs (See [PR 10199](https://github.com/bitcoin/bitcoin/pull/10199)).
+
+### Changes to internal logic and wallet behavior
+
+- Internally, estimates are now tracked on 3 different time horizons. This allows for longer targets and means estimates adjust more quickly to changes in conditions.
+- Estimates can now be *conservative* or *economical*. *Conservative* estimates use longer time horizons to produce an estimate which is less susceptible to rapid changes in fee conditions. *Economical* estimates use shorter time horizons and will be more affected by short-term changes in fee conditions. Economical estimates may be considerably lower during periods of low transaction activity (for example over weekends), but may result in transactions being unconfirmed if prevailing fees increase rapidly.
+- By default, the wallet will use conservative fee estimates to increase the reliability of transactions being confirmed within the desired target. For transactions that are marked as replaceable, the wallet will use an economical estimate by default, since the fee can be 'bumped' if the fee conditions change rapidly (See [PR 10589](https://github.com/bitcoin/bitcoin/pull/10589)).
+- Estimates can now be made for confirmation targets up to 1008 blocks (one week).
+- More data on historical fee rates is stored, leading to more precise fee estimates.
+- Transactions which leave the mempool due to eviction or other non-confirmed reasons are now taken into account by the fee estimation logic, leading to more accurate fee estimates.
+- The fee estimation logic will make sure enough data has been gathered to return a meaningful estimate. If there is insufficient data, a fallback default fee is used.
+
+### Changes to fee estimate RPCs
+
+- The `estimatefee` RPC is now deprecated in favor of using only `estimatesmartfee` (which is the implementation used by the GUI)
+- The `estimatesmartfee` RPC interface has been changed (See [PR 10707](https://github.com/bitcoin/bitcoin/pull/10707)):
+    - The `nblocks` argument has been renamed to `conf_target` (to be consistent with other RPC methods).
+    - An `estimate_mode` argument has been added. This argument takes one of the following strings: `CONSERVATIVE`, `ECONOMICAL` or `UNSET` (which defaults to `CONSERVATIVE`).
+    - The RPC return object now contains an `errors` member, which returns errors encountered during processing.
+    - If Bitcoin Core has not been running for long enough and has not seen enough blocks or transactions to produce an accurate fee estimation, an error will be returned (previously a value of -1 was used to indicate an error, which could be confused for a feerate).
+- A new `estimaterawfee` RPC is added to provide raw fee data. External clients can query and use this data in their own fee estimation logic.
+
+Multi-wallet support
+--------------------
+
+Bitcoin Core now supports loading multiple, separate wallets (See [PR 8694](https://github.com/bitcoin/bitcoin/pull/8694), [PR 10849](https://github.com/bitcoin/bitcoin/pull/10849)). The wallets are completely separated, with individual balances, keys and received transactions.
+
+Multi-wallet is enabled by using more than one `-wallet` argument when starting Bitcoin, either on the command line or in the Bitcoin config file.
+
+**In Bitcoin-Qt, only the first wallet will be displayed and accessible for creating and signing transactions.** GUI selectable multiple wallets will be supported in a future version. However, even in 0.15 other loaded wallets will continue to remain synchronized to the node's current tip in the background. This can be useful if running a pruned node, since loading a wallet where the most recent sync is beyond the pruned height results in having to download and revalidate the whole blockchain. Continuing to synchronize all wallets in the background avoids this problem.
+
+Bitcoin Core 0.15.0 contains the following changes to the RPC interface and `bitcoin-cli` for multi-wallet:
+
+* When running Bitcoin Core with a single wallet, there are **no** changes to the RPC interface or `bitcoin-cli`. All RPC calls and `bitcoin-cli` commands continue to work as before.
+* When running Bitcoin Core with multi-wallet, all *node-level* RPC methods continue to work as before. HTTP RPC requests should be send to the normal `<RPC IP address>:<RPC port>/` endpoint, and `bitcoin-cli` commands should be run as before. A *node-level* RPC method is any method which does not require access to the wallet.
+* When running Bitcoin Core with multi-wallet, *wallet-level* RPC methods must specify the wallet for which they're intended in every request. HTTP RPC requests should be send to the `<RPC IP address>:<RPC port>/wallet/<wallet name>/` endpoint, for example `127.0.0.1:8332/wallet/wallet1.dat/`. `bitcoin-cli` commands should be run with a `-rpcwallet` option, for example `bitcoin-cli -rpcwallet=wallet1.dat getbalance`.
+* A new *node-level* `listwallets` RPC method is added to display which wallets are currently loaded. The names returned by this method are the same as those used in the HTTP endpoint and for the `rpcwallet` argument.
+
+Note that while multi-wallet is now fully supported, the RPC multi-wallet interface should be considered unstable for version 0.15.0, and there may backwards-incompatible changes in future versions.
+
+Replace-by-fee control in the GUI
+---------------------------------
+
+Bitcoin Core has supported creating opt-in replace-by-fee (RBF) transactions
+since version 0.12.0, and since version 0.14.0 has included a `bumpfee` RPC method to
+replace unconfirmed opt-in RBF transactions with a new transaction that pays
+a higher fee.
+
+In version 0.15, creating an opt-in RBF transaction and replacing the unconfirmed
+transaction with a higher-fee transaction are both supported in the GUI (See [PR 9592](https://github.com/bitcoin/bitcoin/pull/9592)).
+
+Removal of Coin Age Priority
 ----------------------------
 
-Previously, it was possible to open the same wallet twice by manually copying the wallet file, causing
-issues when both were opened simultaneously. It is no longer possible to open copies of the same wallet.
+In previous versions of Bitcoin Core, a portion of each block could be reserved for transactions based on the age and value of UTXOs they spent. This concept (Coin Age Priority) is a policy choice by miners, and there are no consensus rules around the inclusion of Coin Age Priority transactions in blocks. In practice, only a few miners continue to use Coin Age Priority for transaction selection in blocks. Bitcoin Core 0.15 removes all remaining support for Coin Age Priority (See [PR 9602](https://github.com/bitcoin/bitcoin/pull/9602)). This has the following implications:
 
+- The concept of *free transactions* has been removed. High Coin Age Priority transactions would previously be allowed to be relayed even if they didn't attach a miner fee. This is no longer possible since there is no concept of Coin Age Priority. The `-limitfreerelay` and `-relaypriority` options which controlled relay of free transactions have therefore been removed.
+- The `-sendfreetransactions` option has been removed, since almost all miners do not include transactions which do not attach a transaction fee.
+- The `-blockprioritysize` option has been removed.
+- The `estimatepriority` and `estimatesmartpriority` RPCs have been removed.
+- The `getmempoolancestors`, `getmempooldescendants`, `getmempooolentry` and `getrawmempool` RPCs no longer return `startingpriority` and `currentpriority`.
+- The `prioritisetransaction` RPC no longer takes a `priority_delta` argument, which is replaced by a `dummy` argument for backwards compatibility with clients using positional arguments. The RPC is still used to change the apparent fee-rate of the transaction by using the `fee_delta` argument.
+- `-minrelaytxfee` can now be set to 0. If `minrelaytxfee` is set, then fees smaller than `minrelaytxfee` (per kB) are rejected from relaying, mining and transaction creation. This defaults to 1000 satoshi/kB.
+- The `-printpriority` option has been updated to only output the fee rate and hash of transactions included in a block by the mining code.
 
-Debug `-minimumchainwork` argument added
-----------------------------------------
+Mempool Persistence Across Restarts
+-----------------------------------
 
-A hidden debug argument `-minimumchainwork` has been added to allow a custom minimum work value to be used
-when validating a chain.
+Version 0.14 introduced mempool persistence across restarts (the mempool is saved to a `mempool.dat` file in the data directory prior to shutdown and restores the mempool when the node is restarted). Version 0.15 allows this feature to be switched on or off using the `-persistmempool` command-line option (See [PR 9966](https://github.com/bitcoin/bitcoin/pull/9966)). By default, the option is set to true, and the mempool is saved on shutdown and reloaded on startup. If set to false, the `mempool.dat` file will not be loaded on startup or saved on shutdown.
 
+New RPC methods
+---------------
+
+Version 0.15 introduces several new RPC methods:
+
+- `abortrescan` stops current wallet rescan, e.g. when triggered by an `importprivkey` call (See [PR 10208](https://github.com/bitcoin/bitcoin/pull/10208)).
+- `combinerawtransaction` accepts a JSON array of raw transactions and combines them into a single raw transaction (See [PR 10571](https://github.com/bitcoin/bitcoin/pull/10571)).
+- `estimaterawfee` returns raw fee data so that customized logic can be implemented to analyze the data and calculate estimates. See [Fee Estimation Improvements](#fee-estimation-improvements) for full details on changes to the fee estimation logic and interface.
+- `getchaintxstats` returns statistics about the total number and rate of transactions
+  in the chain (See [PR 9733](https://github.com/bitcoin/bitcoin/pull/9733)).
+- `listwallets` lists wallets which are currently loaded. See the *Multi-wallet* section
+  of these release notes for full details (See [Multi-wallet support](#multi-wallet-support)).
+- `uptime` returns the total runtime of the `bitcoind` server since its last start (See [PR 10400](https://github.com/bitcoin/bitcoin/pull/10400)).
 
 Low-level RPC changes
-----------------------
+---------------------
 
-- The "currentblocksize" value in getmininginfo has been removed.
+- When using Bitcoin Core in multi-wallet mode, RPC requests for wallet methods must specify
+  the wallet that they're intended for. See [Multi-wallet support](#multi-wallet-support) for full details.
 
-- `dumpwallet` no longer allows overwriting files. This is a security measure
-  as well as prevents dangerous user mistakes.
+- The new database model no longer stores information about transaction
+  versions of unspent outputs (See [Performance improvements](#performance-improvements)). This means that:
+  - The `gettxout` RPC no longer has a `version` field in the response.
+  - The `gettxoutsetinfo` RPC reports `hash_serialized_2` instead of `hash_serialized`,
+    which does not commit to the transaction versions of unspent outputs, but does
+    commit to the height and coinbase information.
+  - The `getutxos` REST path no longer reports the `txvers` field in JSON format,
+    and always reports 0 for transaction versions in the binary format
 
-- `backupwallet` will now fail when attempting to backup to source file, rather than
-  destroying the wallet.
+- The `estimatefee` RPC is deprecated. Clients should switch to using the `estimatesmartfee` RPC, which returns better fee estimates. See [Fee Estimation Improvements](#fee-estimation-improvements) for full details on changes to the fee estimation logic and interface.
 
-- `listsinceblock` will now throw an error if an unknown `blockhash` argument
-  value is passed, instead of returning a list of all wallet transactions since
-  the genesis block. The behaviour is unchanged when an empty string is provided.
+- The `gettxoutsetinfo` response now contains `disk_size` and `bogosize` instead of
+  `bytes_serialized`. The first is a more accurate estimate of actual disk usage, but
+  is not deterministic. The second is unrelated to disk usage, but is a
+  database-independent metric of UTXO set size: it counts every UTXO entry as 50 + the
+  length of its scriptPubKey (See [PR 10426](https://github.com/bitcoin/bitcoin/pull/10426)).
 
-0.15.1 Change log
-=================
+- `signrawtransaction` can no longer be used to combine multiple transactions into a single transaction. Instead, use the new `combinerawtransaction` RPC (See [PR 10571](https://github.com/bitcoin/bitcoin/pull/10571)).
 
-### Mining
-- #11100 `7871a7d` Fix confusing blockmax{size,weight} options, dont default to throwing away money (TheBlueMatt)
+- `fundrawtransaction` no longer accepts a `reserveChangeKey` option. This option used to allow RPC users to fund a raw transaction using an key from the keypool for the change address without removing it from the available keys in the keypool. The key could then be re-used for a `getnewaddress` call, which could potentially result in confusing or dangerous behaviour (See [PR 10784](https://github.com/bitcoin/bitcoin/pull/10784)).
 
-### RPC and other APIs
-- #10859 `2a5d099` gettxout: Slightly improve doc and tests (jtimon)
-- #11267 `b1a6c94` update cli for estimate\*fee argument rename (laanwj)
-- #11483 `20cdc2b` Fix importmulti bug when importing an already imported key (pedrobranco)
-- #9937 `a43be5b` Prevent `dumpwallet` from overwriting files (laanwj)
-- #11465 `405e069` Update named args documentation for importprivkey (dusty-wil)
-- #11131 `b278a43` Write authcookie atomically (laanwj)
-- #11565 `7d4546f` Make listsinceblock refuse unknown block hash (ryanofsky)
-- #11593 `8195cb0` Work-around an upstream libevent bug (theuni)
+- `estimatepriority` and `estimatesmartpriority` have been removed. See [Removal of Coin Age Priority](#removal-of-coin-age-priority).
 
-### P2P protocol and network code
-- #11397 `27e861a` Improve and document SOCKS code (laanwj)
-- #11252 `0fe2a9a` When clearing addrman clear mapInfo and mapAddr (instagibbs)
-- #11527 `a2bd86a` Remove my testnet DNS seed (schildbach)
-- #10756 `0a5477c` net processing: swap out signals for an interface class (theuni)
-- #11531 `55b7abf` Check that new headers are not a descendant of an invalid block (more effeciently) (TheBlueMatt)
-- #11560 `49bf090` Connect to a new outbound peer if our tip is stale (sdaftuar)
-- #11568 `fc966bb` Disconnect outbound peers on invalid chains (sdaftuar)
-- #11578 `ec8dedf` Add missing lock in ProcessHeadersMessage(...) (practicalswift)
-- #11456 `6f27965` Replace relevant services logic with a function suite (TheBlueMatt)
-- #11490 `bf191a7` Disconnect from outbound peers with bad headers chains (sdaftuar)
+- The `listunspent` RPC now takes a `query_options` argument (see [PR 8952](https://github.com/bitcoin/bitcoin/pull/8952)), which is a JSON object
+  containing one or more of the following members:
+  - `minimumAmount` - a number specifying the minimum value of each UTXO
+  - `maximumAmount` - a number specifying the maximum value of each UTXO
+  - `maximumCount` - a number specifying the minimum number of UTXOs
+  - `minimumSumAmount` - a number specifying the minimum sum value of all UTXOs
 
-### Validation
-- #10357 `da4908c` Allow setting nMinimumChainWork on command line (sdaftuar)
-- #11458 `2df65ee` Don't process unrequested, low-work blocks (sdaftuar)
+- The `getmempoolancestors`, `getmempooldescendants`, `getmempooolentry` and `getrawmempool` RPCs no longer return `startingpriority` and `currentpriority`. See [Removal of Coin Age Priority](#removal-of-coin-age-priority).
 
-### Build system
-- #11440 `b6c0209` Fix validationinterface build on super old boost/clang (TheBlueMatt)
-- #11530 `265bb21` Add share/rpcuser to dist. source code archive (MarcoFalke)
+- The `dumpwallet` RPC now returns the full absolute path to the dumped wallet. (it
+  used to return no value, even if successful (See [PR 9740](https://github.com/bitcoin/bitcoin/pull/9740)).
 
-### GUI
-- #11334 `19d63e8` Remove custom fee radio group and remove nCustomFeeRadio setting (achow101)
-- #11198 `7310f1f` Fix display of package name on 'open config file' tooltip (esotericnonsense)
-- #11015 `6642558` Add delay before filtering transactions (lclc)
-- #11338 `6a62c74` Backup former GUI settings on `-resetguisettings` (laanwj)
-- #11335 `8d13b42` Replace save|restoreWindowGeometry with Qt functions (MeshCollider)
-- #11237 `2e31b1d` Fixing division by zero in time remaining (MeshCollider)
-- #11247 `47c02a8` Use IsMine to validate custom change address (MarcoFalke)
+- In the `getpeerinfo` RPC, the return object for each peer now returns an `addrbind` member, which contains the ip address and port of the connection to the peer. This is in addition to the `addrlocal` member which contains the ip address and port of the local node as reported by the peer (See [PR 10478](https://github.com/bitcoin/bitcoin/pull/10478)).
 
-### Wallet
-- #11017 `9e8aae3` Close DB on error (kallewoof)
-- #11225 `6b4d9f2` Update stored witness in AddToWallet (sdaftuar)
-- #11126 `2cb720a` Acquire cs_main lock before cs_wallet during wallet initialization (ryanofsky)
-- #11476 `9c8006d` Avoid opening copied wallet databases simultaneously (ryanofsky)
-- #11492 `de7053f` Fix leak in CDB constructor (promag)
-- #11376 `fd79ed6` Ensure backupwallet fails when attempting to backup to source file (tomasvdw)
-- #11326 `d570aa4` Fix crash on shutdown with invalid wallet (MeshCollider)
+- The `disconnectnode` RPC can now disconnect a node specified by node ID (as well as by IP address/port). To disconnect a node based on node ID, call the RPC with the new `nodeid` argument (See [PR 10143](https://github.com/bitcoin/bitcoin/pull/10143)).
 
-### Tests and QA
-- #11399 `a825d4a` Fix bip68-sequence rpc test (jl2012)
-- #11150 `847c75e` Add getmininginfo test (mess110)
-- #11407 `806c78f` add functional test for mempoolreplacement command line arg (instagibbs)
-- #11433 `e169349` Restore bitcoin-util-test py2 compatibility (MarcoFalke)
-- #11308 `2e1ac70` zapwallettxes: Wait up to 3s for mempool reload (MarcoFalke)
-- #10798 `716066d` test bitcoin-cli (jnewbery)
-- #11443 `019c492` Allow "make cov" out-of-tree; Fix rpc mapping check (MarcoFalke)
-- #11445 `51bad91` 0.15.1 Backports (MarcoFalke)
-- #11319 `2f0b30a` Fix error introduced into p2p-segwit.py, and prevent future similar errors (sdaftuar)
-- #10552 `e4605d9` Tests for zmqpubrawtx and zmqpubrawblock (achow101)
-- #11067 `eeb24a3` TestNode: Add wait_until_stopped helper method (MarcoFalke)
-- #11068 `5398f20` Move wait_until to util (MarcoFalke)
-- #11125 `812c870` Add bitcoin-cli -stdin and -stdinrpcpass functional tests (promag)
-- #11077 `1d80d1e` fix timeout issues from TestNode (jnewbery)
-- #11078 `f1ced0d` Make p2p-leaktests.py more robust (jnewbery)
-- #11210 `f3f7891` Stop test_bitcoin-qt touching ~/.bitcoin (MeshCollider)
-- #11234 `f0b6795` Remove redundant testutil.cpp|h files (MeshCollider)
-- #11215 `cef0319` fixups from set_test_params() (jnewbery)
-- #11345 `f9cf7b5` Check connectivity before sending in assumevalid.py (jnewbery)
-- #11091 `c276c1e` Increase initial RPC timeout to 60 seconds (laanwj)
-- #10711 `fc2aa09` Introduce TestNode (jnewbery)
-- #11230 `d8dd8e7` Fixup dbcrash interaction with add_nodes() (jnewbery)
-- #11241 `4424176` Improve signmessages functional test (mess110)
-- #11116 `2c4ff35` Unit tests for script/standard and IsMine functions (jimpo)
-- #11422 `a36f332` Verify DBWrapper iterators are taking snapshots (TheBlueMatt)
-- #11121 `bb5e7cb` TestNode tidyups (jnewbery)
-- #11521 `ca0f3f7` travis: move back to the minimal image (theuni)
-- #11538 `adbc9d1` Fix race condition failures in replace-by-fee.py, sendheaders.py (sdaftuar)
-- #11472 `4108879` Make tmpdir option an absolute path, misc cleanup (MarcoFalke)
-- #10853 `5b728c8` Fix RPC failure testing (again) (jnewbery)
-- #11310 `b6468d3` Test listwallets RPC (mess110)
+- The second argument in `prioritisetransaction` has been renamed from `priority_delta` to `dummy` since Bitcoin Core no longer has a concept of coin age priority. The `dummy` argument has no functional effect, but is retained for positional argument compatibility. See [Removal of Coin Age Priority](#removal-of-coin-age-priority).
 
-### Miscellaneous
-- #11377 `75997c3` Disallow uncompressed pubkeys in bitcoin-tx [multisig] output adds (TheBlueMatt)
-- #11437 `dea3b87` [Docs] Update Windows build instructions for using WSL and Ubuntu 17.04 (fanquake)
-- #11318 `8b61aee` Put back inadvertently removed copyright notices (gmaxwell)
-- #11442 `cf18f42` [Docs] Update OpenBSD Build Instructions for OpenBSD 6.2 (fanquake)
-- #10957 `50bd3f6` Avoid returning a BIP9Stats object with uninitialized values (practicalswift)
-- #11539 `01223a0` [verify-commits] Allow revoked keys to expire (TheBlueMatt)
+- The `resendwallettransactions` RPC throws an error if the `-walletbroadcast` option is set to false (See [PR 10995](https://github.com/bitcoin/bitcoin/pull/10995)).
+
+- The second argument in the `submitblock` RPC argument has been renamed from `parameters` to `dummy`. This argument never had any effect, and the renaming is simply to communicate this fact to the user (See [PR 10191](https://github.com/bitcoin/bitcoin/pull/10191))
+  (Clients should, however, use positional arguments for `submitblock` in order to be compatible with BIP 22.)
+
+- The `verbose` argument of `getblock` has been renamed to `verbosity` and now takes an integer from 0-2. Verbose level 0 is equivalent to `verbose=false`. Verbose level 1 is equivalent to `verbose=true`. Verbose level 2 will give the full transaction details of each transaction in the output as given by `getrawtransaction`. The old behavior of using the `verbose` named argument and a boolean value is still maintained for compatibility.
+
+- Error codes have been updated to be more accurate for the following error cases (See [PR 9853](https://github.com/bitcoin/bitcoin/pull/9853)):
+  - `getblock` now returns RPC_MISC_ERROR if the block can't be found on disk (for
+  example if the block has been pruned). Previously returned RPC_INTERNAL_ERROR.
+  - `pruneblockchain` now returns RPC_MISC_ERROR if the blocks cannot be pruned
+  because the node is not in pruned mode. Previously returned RPC_METHOD_NOT_FOUND.
+  - `pruneblockchain` now returns RPC_INVALID_PARAMETER if the blocks cannot be pruned
+  because the supplied timestamp is too late. Previously returned RPC_INTERNAL_ERROR.
+  - `pruneblockchain` now returns RPC_MISC_ERROR if the blocks cannot be pruned
+  because the blockchain is too short. Previously returned RPC_INTERNAL_ERROR.
+  - `setban` now returns RPC_CLIENT_INVALID_IP_OR_SUBNET if the supplied IP address
+  or subnet is invalid. Previously returned RPC_CLIENT_NODE_ALREADY_ADDED.
+  - `setban` now returns RPC_CLIENT_INVALID_IP_OR_SUBNET if the user tries to unban
+  a node that has not previously been banned. Previously returned RPC_MISC_ERROR.
+  - `removeprunedfunds` now returns RPC_WALLET_ERROR if `bitcoind` is unable to remove
+  the transaction. Previously returned RPC_INTERNAL_ERROR.
+  - `removeprunedfunds` now returns RPC_INVALID_PARAMETER if the transaction does not
+  exist in the wallet. Previously returned RPC_INTERNAL_ERROR.
+  - `fundrawtransaction` now returns RPC_INVALID_ADDRESS_OR_KEY if an invalid change
+  address is provided. Previously returned RPC_INVALID_PARAMETER.
+  - `fundrawtransaction` now returns RPC_WALLET_ERROR if `bitcoind` is unable to create
+  the transaction. The error message provides further details. Previously returned
+  RPC_INTERNAL_ERROR.
+  - `bumpfee` now returns RPC_INVALID_PARAMETER if the provided transaction has
+  descendants in the wallet. Previously returned RPC_MISC_ERROR.
+  - `bumpfee` now returns RPC_INVALID_PARAMETER if the provided transaction has
+  descendants in the mempool. Previously returned RPC_MISC_ERROR.
+  - `bumpfee` now returns RPC_WALLET_ERROR if the provided transaction has
+  has been mined or conflicts with a mined transaction. Previously returned
+  RPC_INVALID_ADDRESS_OR_KEY.
+  - `bumpfee` now returns RPC_WALLET_ERROR if the provided transaction is not
+  BIP 125 replaceable. Previously returned RPC_INVALID_ADDRESS_OR_KEY.
+  - `bumpfee` now returns RPC_WALLET_ERROR if the provided transaction has already
+  been bumped by a different transaction. Previously returned RPC_INVALID_REQUEST.
+  - `bumpfee` now returns RPC_WALLET_ERROR if the provided transaction contains
+  inputs which don't belong to this wallet. Previously returned RPC_INVALID_ADDRESS_OR_KEY.
+  - `bumpfee` now returns RPC_WALLET_ERROR if the provided transaction has multiple change
+  outputs. Previously returned RPC_MISC_ERROR.
+  - `bumpfee` now returns RPC_WALLET_ERROR if the provided transaction has no change
+  output. Previously returned RPC_MISC_ERROR.
+  - `bumpfee` now returns RPC_WALLET_ERROR if the fee is too high. Previously returned
+  RPC_MISC_ERROR.
+  - `bumpfee` now returns RPC_WALLET_ERROR if the fee is too low. Previously returned
+  RPC_MISC_ERROR.
+  - `bumpfee` now returns RPC_WALLET_ERROR if the change output is too small to bump the
+  fee. Previously returned RPC_MISC_ERROR.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 Credits
@@ -245,33 +465,132 @@ Credits
 
 Thanks to everyone who directly contributed to this release:
 
-- Andreas Schildbach
+- ¥í¥Ï¥ó ¥À¥ë
+- Ahmad Kazi
+- aideca
+- Akio Nakamura
+- Alex Morcos
+- Allan Doensen
+- Andres G. Aragoneses
 - Andrew Chow
-- Chris Moore
+- Awemany
+- Bob McElrath
+- Brian McMichael
+- BtcDrak
+- Charlie Lee
+- Chris Gavin
+- Chris Stewart
 - Cory Fields
-- Cristian Mircea Messel
-- Daniel Edgecumbe
-- Donal OConnor
-- Dusty Williams
+- CryptAxe
+- Dag Robole
+- Daniel Aleksandersen
+- Daniel Cousens
+- darksh1ne
+- Dimitris Tsapakidis
+- Eric Shaw Jr
+- Evan Klitzke
 - fanquake
+- Felix Weis
+- flack
+- Greg Griffith
+- Gregory Maxwell
 - Gregory Sanders
-- Jim Posen
+- gubatron
+- Ian Kelling
+- Jack Grigg
+- James Evans
+- James Hilliard
+- Jameson Lopp
+- Jeremy Rubin
+- Jimmy Song
+- Jo?o Barbosa
+- Johnathan Corgan
 - John Newbery
-- Johnson Lau
-- JoÃ£o Barbosa
-- Jorge TimÃ³n
+- Jonas Schnelli
+- jonnynewbs
+- Jorge Tim¨®n
+- Kalle Alm
 - Karl-Johan Alm
-- Lucas Betschart
-- MarcoFalke
+- Kewde
+- keystrike
+- KibbledJiveElkZoo
+- Kibbled Jive Elk Zoo
+- kirit93
+- kobake
+- Kyle Honeycutt
+- Lawrence Nahum
+- Luke Dashjr
+- Marco Falke
+- Marcos Mayorga
+- Marijn Stollenga
+- Mario Dian
+- Mark Friedenbach
+- Marko Bencun
+- Masahiko Hyuga
 - Matt Corallo
-- Paul Berg
+- Matthew Zipkin
+- Matthias Grundmann
+- Michael Goldstein
+- Michael Rotarius
+- Mikerah
+- Mike van Rossum
+- Mitchell Cash
+- NicolasDorier
+- Nicolas Dorier
+- Patrick Strateman
+- Pavel Jan¨ªk
+- Pavlos Antoniou
+- Pavol Rusnak
 - Pedro Branco
+- Peter Todd
 - Pieter Wuille
 - practicalswift
+- Ren¨¦ Nyffenegger
+- Ricardo Velhote
+- romanornr
 - Russell Yanofsky
-- Samuel Dobson
+- Rusty Russell
+- Ryan Havar
+- shaolinfry
+- Shigeya Suzuki
+- Simone Madeo
+- Spencer Lievens
+- Steven D. Lander
 - Suhas Daftuar
-- Tomas van der Wansem
+- Takashi Mitsuta
+- Thomas Snider
+- Timothy Redaelli
+- tintinweb
+- tnaka
+- Warren Togami
 - Wladimir J. van der Laan
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 As well as everyone that helped translating on [Transifex](https://www.transifex.com/projects/p/bitcoin/).
