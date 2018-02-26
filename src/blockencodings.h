@@ -200,7 +200,7 @@ protected:
     const Config *config;
 public:
     CBlockHeader header;
-    explicit PartiallyDownloadedBlock(const Config &configIn, CTxMemPool* poolIn) : pool(poolIn) {}
+    explicit PartiallyDownloadedBlock(const Config &configIn, CTxMemPool* poolIn) : pool(poolIn), config(&configIn) {}
 
     // extra_txn is a list of extra transactions to look at, in <witness hash, reference> form
     ReadStatus InitData(const CBlockHeaderAndShortTxIDs& cmpctblock, const std::vector<std::pair<uint256, CTransactionRef>>& extra_txn);

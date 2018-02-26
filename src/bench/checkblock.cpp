@@ -43,6 +43,7 @@ static void DeserializeAndCheckBlockTest(benchmark::State& state)
 
     const Config& config = GetConfig();
     const auto chainParams = CreateChainParams(CBaseChainParams::MAIN);
+    SelectParams(CBaseChainParams::MAIN);
 
     while (state.KeepRunning()) {
         CBlock block; // Note that CBlock caches its checked state, so we need to recreate it here
