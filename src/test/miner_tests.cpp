@@ -221,7 +221,6 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
 
     GlobalConfig config;
 
-    LOCK(cs_main);
     fCheckpointsEnabled = false;
 
     // Simple block creation, nothing special yet:
