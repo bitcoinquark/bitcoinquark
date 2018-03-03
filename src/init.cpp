@@ -1045,7 +1045,7 @@ bool AppInitParameterInteraction(Config& config)
     // Configure excessive block size.
     const auto nProposedExcessiveBlockSize =
     		gArgs.GetArg("-excessiveblocksize", DEFAULT_MAX_BLOCK_SIZE);
-    if (nProposedExcessiveBlockSize < ONE_MEGABYTE) {
+    if (nProposedExcessiveBlockSize < (int)ONE_MEGABYTE) {
         return InitError(
             _("Excessive block size must be >= 1,000,000 bytes (1MB)"));
     } else {
