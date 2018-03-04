@@ -1,5 +1,6 @@
 ---
-name: "bitcoinquark-osx-0.16"enable_cache: true
+name: "bitcoinquark-osx-0.16"
+enable_cache: true
 suites:
 - "trusty"
 architectures:
