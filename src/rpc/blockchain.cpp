@@ -1764,6 +1764,7 @@ UniValue savemempool(const JSONRPCRequest& request)
 
     return NullUniValue;
 }
+
 UniValue getspentinfo(const JSONRPCRequest& request)
 {
 
@@ -1833,6 +1834,7 @@ static const CRPCCommand commands[] =
     { "blockchain",         "gettxout",               &gettxout,               {"txid","n","include_mempool"} },
     { "blockchain",         "gettxoutsetinfo",        &gettxoutsetinfo,        {} },
     { "blockchain",         "pruneblockchain",        &pruneblockchain,        {"height"} },
+	{ "blockchain",         "savemempool",            &savemempool,            {} },
     { "blockchain",         "verifychain",            &verifychain,            {"checklevel","nblocks"} },
 
     { "blockchain",         "preciousblock",          &preciousblock,          {"blockhash"} },
