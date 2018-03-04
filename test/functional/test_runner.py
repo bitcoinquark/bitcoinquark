@@ -175,6 +175,7 @@ NON_SCRIPTS = [
     "combine_logs.py",
     "create_cache.py",
     "test_runner.py",
+	'feature_maxuploadtarget.py'
     "p2p_compactblocks.py",
     'feature_btq_hardfork.py',
     'feature_addressindex.py',
