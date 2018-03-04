@@ -60,7 +60,7 @@ BASE_SCRIPTS= [
     # vv Tests less than 5m vv
     'feature_block.py',
     'rpc_fundrawtransaction.py',
-    'p2p_compactblocks.py',
+    #'p2p_compactblocks.py',
     'feature_segwit.py',
     # vv Tests less than 2m vv
     'wallet_basic.py',
@@ -126,7 +126,6 @@ BASE_SCRIPTS= [
     'feature_cltv.py',
     'rpc_uptime.py',
     'wallet_resendwallettransactions.py',
-    'wallet_fallbackfee.py',
     'feature_minchainwork.py',
     'p2p_fingerprint.py',
     'feature_uacomment.py',
@@ -134,8 +133,8 @@ BASE_SCRIPTS= [
     'feature_logging.py',
     'p2p_node_network_limited.py',
     'feature_config_args.py',
-    #'addressindex.py',
-    #'spentindex.py',    
+    #'feature_addressindex.py',
+    #'feature_spentindex.py',    
     # Don't append tests at the end to avoid merge conflicts
     # Put them in a random line within the section that fits their approximate run-time
 ]
@@ -171,29 +170,29 @@ EXTENDED_SCRIPTS = [
 EXTENDED_SCRIPTS = [
     # These tests are not run by the travis build process.
     # Longest test should go first, to favor running tests in parallel
-    'pruning.py',
+    'feature_pruning.py',
     # vv Tests less than 20m vv
-    'smartfees.py',
+    'feature_fee_estimation.py',
     # vv Tests less than 5m vv
-    'maxuploadtarget.py',
+    'feature_maxuploadtarget.py',
     'mempool_packages.py',
-    'dbcrash.py',
+    'feature_dbcrash.py',
     # vv Tests less than 2m vv
-    'bip68-sequence.py',
-    'getblocktemplate_longpoll.py',
-    'p2p-timeouts.py',
+    'feature_bip68_sequence.py',
+    'mining_getblocktemplate_longpoll.py',
+    'p2p_timeouts.py',
     # vv Tests less than 60s vv
-    'bip9-softforks.py',
-    'p2p-feefilter.py',
-    'rpcbind_test.py',
+    'feature_bip9_softforks.py',
+    'p2p_feefilter.py',
+    'rpc_bind.py',
     # vv Tests less than 30s vv
-    'assumevalid.py',
+    'feature_assumevalid.py',
     'example_test.py',
-    'txn_doublespend.py',
-    'txn_clone.py --mineblock',
-    'forknotify.py',
-    'invalidateblock.py',
-    'replace-by-fee.py',
+    'wallet_txn_doublespend.py',
+    'wallet_txn_clone.py --mineblock',
+    'feature_notifications.py',
+    'rpc_invalidateblock.py',
+    'feature_rbf.py',
 ]
 
 # Place EXTENDED_SCRIPTS first since it has the 3 longest running tests
@@ -204,10 +203,10 @@ NON_SCRIPTS = [
     "combine_logs.py",
     "create_cache.py",
     "test_runner.py",
-    "p2p-compactblocks.py",
-    'btq-hardfork.py',
-    'addressindex.py',
-    'spentindex.py',
+    "p2p_compactblocks.py",
+    'feature_btq_hardfork.py',
+    'feature_addressindex.py',
+    'feature_spentindex.py',
 ]
 
 def main():

@@ -285,8 +285,6 @@ class BitcoinTestFramework():
                 assert 'bitcoinquarkd exited' in str(e)  # node must have shutdown
                 self.nodes[i].running = False
                 self.nodes[i].process = None
-                self.nodes[i].running = False
-                self.nodes[i].process = None
                 if expected_msg is not None:
                     log_stderr.seek(0)
                     stderr = log_stderr.read().decode('utf-8')
@@ -294,9 +292,9 @@ class BitcoinTestFramework():
                         raise AssertionError("Expected error \"" + expected_msg + "\" not found in:\n" + stderr)
             else:
                 if expected_msg is None:
-                    assert_msg = "bitcoind should have exited with an error"
+                    assert_msg = "bitcoinquarkd should have exited with an error"
                 else:
-                    assert_msg = "bitcoind should have exited with expected error " + expected_msg
+                    assert_msg = "bitcoinquarkd should have exited with expected error " + expected_msg
                 raise AssertionError(assert_msg)
 
     def wait_for_node_exit(self, i, timeout):
