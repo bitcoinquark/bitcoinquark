@@ -2,7 +2,7 @@
 # Copyright (c) 2017 The Bitcoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
-"""Class for bitcoind node under test"""
+"""Class for bitcoinquarkd node under test"""
 
 import decimal
 import errno
@@ -29,7 +29,7 @@ JSONDecodeError = getattr(json, "JSONDecodeError", ValueError)
 BITCOIND_PROC_WAIT_TIMEOUT = 60
 
 class TestNode():
-    """A class for representing a bitcoind node under test.
+    """A class for representing a bitcoinquarkd node under test.
 
     This class contains:
 
