@@ -1,18 +1,11 @@
 Bitcoin Core version 0.16.0 is now available from:
 
-Bitcoin Core version *version* is now available from:
-Bitcoin Core version *version* is now available from:
   <https://bitcoincore.org/bin/bitcoin-core-0.16.0/>
-
-
-  <https://bitcoincore.org/bin/bitcoin-core-*version*/>
 
 This is a new major version release, including new features, various bugfixes
 and performance improvements, as well as updated translations.
 
-Please report bugs using the issue tracker at github:
 Please report bugs using the issue tracker at GitHub:
-
 
   <https://github.com/bitcoin/bitcoin/issues>
 
@@ -24,8 +17,6 @@ How to Upgrade
 ==============
 
 If you are running an older version, shut it down. Wait until it has completely
-shut down (which might take a few minutes for older versions), then run the 
-installer (on Windows) or just copy over /Applications/Bitcoin-Qt (on Mac)
 shut down (which might take a few minutes for older versions), then run the
 installer (on Windows) or just copy over `/Applications/Bitcoin-Qt` (on Mac)
 or `bitcoind`/`bitcoin-qt` (on Linux).
@@ -50,7 +41,7 @@ Compatibility
 ==============
 
 Bitcoin Core is extensively tested on multiple operating systems using
-the Linux kernel, macOS 10.8+, and Windows 7 and newer (Windows XP is not supported).
+the Linux kernel, macOS 10.8+, and Windows Vista and later. Windows XP is not supported.
 
 Bitcoin Core should also work on most other Unix-like systems but is not
 frequently tested on them.
@@ -60,10 +51,6 @@ Notable changes
 
 Wallet changes
 ---------------
-Performance Improvements
-------------------------
-RPC changes
-------------
 
 ### Segwit Wallet
 
@@ -100,42 +87,28 @@ to new wallets; wallets made with previous versions will not be upgraded to be H
 The send screen now uses BIP125 RBF by default, regardless of `-walletrbf`.
 There is a checkbox to mark the transaction as final.
 
-- The chainstate database (which is used for tracking UTXOs) has been changed
-  from a per-transaction model to a per-output model (See [PR 10195](https://github.com/bitcoin/bitcoin/pull/10195)). Advantages of this model
-  are that it:
-    - avoids the CPU overhead of deserializing and serializing the unused outputs;
-    - has more predictable memory usage;
-    - uses simpler code;
-    - is adaptable to various future cache flushing strategies.
-- The `fundrawtransaction` rpc will reject the previously deprecated `reserveChangeKey` option.
+The RPC default remains unchanged: to use RBF, launch with `-walletrbf=1` or
+use the `replaceable` argument for individual transactions.
 
 ### Wallets directory configuration (`-walletdir`)
 
+Bitcoin Core now has more flexibility in where the wallets directory can be
+located. Previously wallet database files were stored at the top level of the
+bitcoin data directory. The behavior is now:
 
-  As a result, validating the blockchain during Initial Block Download (IBD) and reindex
-  is ~30-40% faster, uses 10-20% less memory, and flushes to disk far less frequently.
-  The only downside is that the on-disk database is 15% larger. During the conversion from the previous format
-  a few extra gigabytes may be used.
-- Earlier versions experienced a spike in memory usage while flushing UTXO updates to disk.
-  As a result, only half of the available memory was actually used as cache, and the other half was
-  reserved to accommodate flushing. This is no longer the case (See [PR 10148](https://github.com/bitcoin/bitcoin/pull/10148)), and the entirety of
-  the available cache (see `-dbcache`) is now actually used as cache. This reduces the flushing
-  frequency by a factor 2 or more.
-- In previous versions, signature validation for transactions has been cached when the
-  transaction is accepted to the mempool. Version 0.15 extends this to cache the entire script
-  validity (See [PR 10192](https://github.com/bitcoin/bitcoin/pull/10192)). This means that if a transaction in a block has already been accepted to the
-  mempool, the scriptSig does not need to be re-evaluated. Empirical tests show that
-  this results in new block validation being 40-50% faster.
-- LevelDB has been upgraded to version 1.20 (See [PR 10544](https://github.com/bitcoin/bitcoin/pull/10544)). This version contains hardware acceleration for CRC
-  on architectures supporting SSE 4.2. As a result, synchronization and block validation are now faster.
-- SHA256 hashing has been optimized for architectures supporting SSE 4 (See [PR 10182](https://github.com/bitcoin/bitcoin/pull/10182)). SHA256 is around
-  50% faster on supported hardware, which results in around 5% faster IBD and block
-  validation. In version 0.15, SHA256 hardware optimization is disabled in release builds by
-  default, but can be enabled by using `--enable-experimental-asm` when building.
-- Refill of the keypool no longer flushes the wallet between each key which resulted in a ~20x speedup in creating a new wallet. Part of this speedup was used to increase the default keypool to 1000 keys to make recovery more robust. (See [PR 10831](https://github.com/bitcoin/bitcoin/pull/10831)).
+- For new installations (where the data directory doesn't already exist),
+  wallets will now be stored in a new `wallets/` subdirectory inside the data
+  directory by default.
+- For existing nodes (where the data directory already exists), wallets will be
+  stored in the data directory root by default. If a `wallets/` subdirectory
+  already exists in the data directory root, then wallets will be stored in the
+  `wallets/` subdirectory by default.
+- The location of the wallets directory can be overridden by specifying a
+  `-walletdir=<path>` option where `<path>` can be an absolute path to a
+  directory or directory symlink.
 
-Fee Estimation Improvements
----------------------------
+Care should be taken when choosing the wallets directory location, as if it
+becomes unavailable during operation, funds may be lost.
 
 Build: Minimum GCC bumped to 4.8.x
 ------------------------------------
@@ -743,7 +716,5 @@ Thanks to everyone who directly contributed to this release:
 - William Casarin
 - Willy Ko
 - Wladimir J. van der Laan
-
-
 
 As well as everyone that helped translating on [Transifex](https://www.transifex.com/projects/p/bitcoin/).

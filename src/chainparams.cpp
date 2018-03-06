@@ -206,6 +206,8 @@ public:
                         //   (the tx=... number in the SetBestChain debug.log lines)
             3.5         // * estimated number of transactions per second after that timestamp
         };
+        /* disable fallback fee on mainnet */
+        m_fallback_fee_enabled = false;
 
         vPreminePubkeys = {
             { "021dd3be6338f1842d1cf52bbcd3d408b4900ff3ecbdda77a7c19b955fcb7dd816", "03541b002b6e5c7eac7e22172475342c1095c8c012079d660ece960a13466be04e", "023372d26eb06f1c22aec0bef30f01020e911c7bf9dfcd1da59a81580de21d467b" },
@@ -322,7 +324,8 @@ public:
             0.09
         };
 
-        vPreminePubkeys = {
+        /* enable fallback fee on testnet */
+        m_fallback_fee_enabled = true;        vPreminePubkeys = {
             { "0330ac64a02530018aee75282511ab03ad14afded0de3a7631f859fcc95e7053f5","02b1dd3a3d48bae5e8372e896c12fcf1a6a472df03a4e279f1228ea43eb72d7a76","029afac47580783cd5e0fb7b9ef5eb70302e153c02b3880f254eed34e636228fb1" },
 			{ "03408adf7846c306e9bb70b4943a28605195a7baf8f25aabd0d9cad703533ad154","03e8b65f7dddd6747598747dba29f66874456e0182b6c4afaf92b01cf1c97ed333","03b318bfec48b38094f5825b6d60d325df13386cb00742bf8e2b7798c7e19f5616" }
         };
@@ -421,6 +424,9 @@ public:
         base58Prefixes[EXT_SECRET_KEY] = {0x04, 0x35, 0x83, 0x94};
 
         bech32_hrp = "bcrt";
+
+        /* enable fallback fee on regtest */
+        m_fallback_fee_enabled = true;
     }
 };
 
