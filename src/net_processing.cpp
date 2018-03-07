@@ -2645,11 +2645,14 @@ bool static ProcessMessage(const Config& config, CNode* pfrom, const std::string
                     || ((pfrom->nServices & NODE_BITCOIN_QUARK) && IsBitcoinQuarkVersion(headers.back().nVersion));
 
             int sync_at_height = gArgs.GetArg("-syncatheight", DEFAULT_SYNCATHEIGHT);;
-			// non-bitcoinquark node
+
+            // non-bitcoinquark node
             if(!bitcoin_quark_node) {
-            	// Only read bitcoin blocks before fork height
-            	sync_at_height = std::max(sync_at_height, Params().GetConsensus().BTQHeight - 1);
-			}
+        	    // Only read bitcoin blocks before fork height
+            	if(sync_at_height == 0 || sync_at_height > (Params().GetConsensus().BTQHeight - 1)) {
+            		sync_at_height = Params().GetConsensus().BTQHeight - 1;
+            	}
+            }
 
             if(sync_at_height) {
 
