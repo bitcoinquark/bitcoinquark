@@ -2644,17 +2644,24 @@ bool static ProcessMessage(const Config& config, CNode* pfrom, const std::string
             bool bitcoin_quark_node = pfrom->fUsesQuarkMagic
                     || ((pfrom->nServices & NODE_BITCOIN_QUARK) && IsBitcoinQuarkVersion(headers.back().nVersion));
 
-            // non-bitcoinquark node
+            int sync_at_height = gArgs.GetArg("-syncatheight", DEFAULT_SYNCATHEIGHT);;
+			// non-bitcoinquark node
             if(!bitcoin_quark_node) {
-               // Only read bitcoin blocks before fork height
-               int blocks_from_bitcoin = Params().GetConsensus().BTQHeight - 1 - pindexBestHeader->nHeight;
-               if(blocks_from_bitcoin >= 0 &&  blocks_from_bitcoin < (int)nCount) {
+            	// Only read bitcoin blocks before fork height
+            	sync_at_height = std::max(sync_at_height, Params().GetConsensus().BTQHeight - 1);
+			}
 
-                   if(chainActive.Height() < (Params().GetConsensus().BTQHeight - 1)) {
-                       UpdateBlockAvailability(pfrom->GetId(), headers[blocks_from_bitcoin].GetHash());
+            if(sync_at_height) {
+
+               // Stop synchronizing blocks after reaching sync_at_height
+               int blocks_left = sync_at_height - pindexBestHeader->nHeight;
+               if(blocks_left >= 0 &&  blocks_left < (int)nCount) {
+
+                   if(chainActive.Height() < sync_at_height) {
+                       UpdateBlockAvailability(pfrom->GetId(), headers[blocks_left].GetHash());
                    }
 
-                   headers.resize(blocks_from_bitcoin);
+                   headers.resize(blocks_left);
                }
             }
         }

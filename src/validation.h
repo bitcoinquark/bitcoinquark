@@ -154,6 +154,8 @@ static const bool DEFAULT_PEERBLOOMFILTERS = true;
 
 /** Default for -stopatheight */
 static const int DEFAULT_STOPATHEIGHT = 0;
+/** Default for -syncatheight */
+static const int DEFAULT_SYNCATHEIGHT = 0;
 
 struct BlockHasher
 {
