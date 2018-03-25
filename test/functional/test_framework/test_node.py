@@ -169,11 +169,11 @@ class TestNode():
     def assert_start_raises_init_error(self, extra_args=None, expected_msg=None, partial_match=False, *args, **kwargs):
         """Attempt to start the node and expect it to raise an error.
 
-        extra_args: extra arguments to pass through to bitcoind
-        expected_msg: regex that stderr should match when bitcoind fails
+        extra_args: extra arguments to pass through to bitcoinquarkd
+        expected_msg: regex that stderr should match when bitcoinquarkd fails
 
-        Will throw if bitcoind starts without an error.
-        Will throw if an expected_msg is provided and it does not match bitcoind's stdout."""
+        Will throw if bitcoinquarkd starts without an error.
+        Will throw if an expected_msg is provided and it does not match bitcoinquarkd's stdout."""
         with tempfile.SpooledTemporaryFile(max_size=2**16) as log_stderr:
             try:
                 self.start(extra_args, stderr=log_stderr, *args, **kwargs)
@@ -181,7 +181,7 @@ class TestNode():
                 self.stop_node()
                 self.wait_util_stopped()
             except Exception as e:
-                assert 'bitcoind exited' in str(e)  # node must have shutdown
+                assert 'bitcoinquarkd exited' in str(e)  # node must have shutdown
                 self.running = False
                 self.process = None
                 # Check stderr for expected message
@@ -196,9 +196,9 @@ class TestNode():
                             raise AssertionError('Expected message "{}" does not fully match stderr:\n"{}"'.format(expected_msg, stderr))
             else:
                 if expected_msg is None:
-                    assert_msg = "bitcoind should have exited with an error"
+                    assert_msg = "bitcoinquarkd should have exited with an error"
                 else:
-                    assert_msg = "bitcoind should have exited with expected error " + expected_msg
+                    assert_msg = "bitcoinquarkd should have exited with expected error " + expected_msg
                 raise AssertionError(assert_msg)
 
     def node_encrypt_wallet(self, passphrase):
