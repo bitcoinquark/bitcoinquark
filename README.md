@@ -3,33 +3,34 @@ Bitcoin Quark integration/staging tree
 
 [![Build Status](https://travis-ci.org/bitcoinquark/bitcoin.svg?branch=master)](https://travis-ci.org/bitcoinquark/bitcoin)
 
-https://bitcoincore.org
+https://www.bitcoinquark.org
 
-What is Bitcoin?
+What is Bitcoin Quark?
 ----------------
 
-Bitcoin is an experimental digital currency that enables instant payments to
-anyone, anywhere in the world. Bitcoin uses peer-to-peer technology to operate
-with no central authority: managing transactions and issuing money are carried
-out collectively by the network. Bitcoin Core is the name of open source
-software which enables the use of this currency.
+Bitcoin Quark is the continuation of the Bitcoin project as peer-to-peer digital cash. 
+It is a fork of the Bitcoin blockchain ledger, with upgraded consensus rules that allow it to grow and scale.
+
+Anyone who held Bitcoin at the time Bitcoin Quark was created became owners of Bitcoin Quark. 
+This means that Bitcoin holders as of block 520520 have the same amount of Bitcoin Quark as they had Bitcoin at that time. 
+If your Bitcoins are stored by a third party such as an exchange, then you must inquire with them about your Bitcoin Quark.
 
 For more information, as well as an immediately useable, binary version of
-the Bitcoin Core software, see https://bitcoin.org/en/download, or read the
+the Bitcoin Quark software, see https://github.com/bitcoinquark/bitcoin/releases, or read the
 [original whitepaper](https://bitcoincore.org/bitcoin.pdf).
 
 License
 -------
 
-Bitcoin Core is released under the terms of the MIT license. See [COPYING](COPYING) for more
+Bitcoin Quark is released under the terms of the MIT license. See [COPYING](COPYING) for more
 information or see https://opensource.org/licenses/MIT.
 
 Development Process
 -------------------
 
 The `master` branch is regularly built and tested, but is not guaranteed to be
-completely stable. [Tags](https://github.com/bitcoin/bitcoin/tags) are created
-regularly to indicate new official, stable release versions of Bitcoin Core.
+completely stable. [Tags](https://github.com/bitcoinquark/bitcoin/tags) are created
+regularly to indicate new official, stable release versions of Bitcoin Quark.
 
 The contribution workflow is described in [CONTRIBUTING.md](CONTRIBUTING.md).
 
