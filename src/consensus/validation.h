@@ -102,5 +102,10 @@ static inline int64_t GetBlockWeight(const CBlock& block, const Consensus::Param
 	int serialization_flag = (block.nHeight < (uint32_t)params.BTQHeight) ? SERIALIZE_BLOCK_LEGACY : 0;
     return ::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION | serialization_flag | SERIALIZE_TRANSACTION_NO_WITNESS) * (WITNESS_SCALE_FACTOR - 1) + ::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION | serialization_flag);
 }
+static inline int64_t GetTransactionInputWeight(const CTxIn& txin)
+{
+    // scriptWitness size is added here because witnesses and txins are split up in segwit serialization.
+    return ::GetSerializeSize(txin, SER_NETWORK, PROTOCOL_VERSION | SERIALIZE_TRANSACTION_NO_WITNESS) * (WITNESS_SCALE_FACTOR - 1) + ::GetSerializeSize(txin, SER_NETWORK, PROTOCOL_VERSION) + ::GetSerializeSize(txin.scriptWitness.stack, SER_NETWORK, PROTOCOL_VERSION);
+}
 
 #endif // BITCOIN_CONSENSUS_VALIDATION_H
