@@ -852,7 +852,8 @@ UniValue getblockheader(const JSONRPCRequest& request)
         legacy_format = true;
     }
 
-    if (mapBlockIndex.count(hash) == 0)
+    const CBlockIndex* pblockindex = LookupBlockIndex(hash);
+    if (!pblockindex) {
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
     }
 
