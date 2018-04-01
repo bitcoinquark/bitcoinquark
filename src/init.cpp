@@ -44,10 +44,8 @@
 #include <util.h>
 #include <utilmoneystr.h>
 #include <validationinterface.h>
-#ifdef ENABLE_WALLET
-#include <wallet/init.h>
-#endif
 #include <warnings.h>
+#include <walletinitinterface.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <memory>
@@ -75,6 +73,7 @@ static const bool DEFAULT_STOPAFTERBLOCKIMPORT = false;
 
 std::unique_ptr<CConnman> g_connman;
 std::unique_ptr<PeerLogicValidation> peerLogic;
+std::unique_ptr<WalletInitInterface> g_wallet_init_interface;
 
 #if ENABLE_ZMQ
 static CZMQNotificationInterface* pzmqNotificationInterface = nullptr;
@@ -117,7 +116,6 @@ static const char* FEE_ESTIMATES_FILENAME="fee_estimates.dat";
 //
 
 std::atomic<bool> fRequestShutdown(false);
-std::atomic<bool> fDumpMempoolLater(false);
 
 void StartShutdown()
 {
@@ -190,9 +188,7 @@ void Shutdown()
     StopREST();
     StopRPC();
     StopHTTPServer();
-#ifdef ENABLE_WALLET
-    FlushWallets();
-#endif
+    g_wallet_init_interface->Flush();
     StopMapPort();
 
     // Because these depend on each-other, we make sure that neither can be
@@ -210,7 +206,7 @@ void Shutdown()
     threadGroup.interrupt_all();
     threadGroup.join_all();
 
-    if (fDumpMempoolLater && gArgs.GetArg("-persistmempool", DEFAULT_PERSIST_MEMPOOL)) {
+    if (g_is_mempool_loaded && gArgs.GetArg("-persistmempool", DEFAULT_PERSIST_MEMPOOL)) {
         DumpMempool();
     }
 
@@ -251,9 +247,7 @@ void Shutdown()
         pcoinsdbview.reset();
         pblocktree.reset();
     }
-#ifdef ENABLE_WALLET
-    StopWallets();
-#endif
+    g_wallet_init_interface->Stop();
 
 #if ENABLE_ZMQ
     if (pzmqNotificationInterface) {
@@ -273,9 +267,8 @@ void Shutdown()
     UnregisterAllValidationInterfaces();
     GetMainSignals().UnregisterBackgroundSignalScheduler();
     GetMainSignals().UnregisterWithMempoolSignals(mempool);
-#ifdef ENABLE_WALLET
-    CloseWallets();
-#endif
+    g_wallet_init_interface->Close();
+    g_wallet_init_interface.reset();
     globalVerifyHandle.reset();
     ECC_Stop();
     LogPrintf("%s: done\n", __func__);
@@ -335,12 +328,13 @@ std::string HelpMessage(HelpMessageMode mode)
     strUsage += HelpMessageOpt("-version", _("Print version and exit"));
     strUsage += HelpMessageOpt("-alertnotify=<cmd>", _("Execute command when a relevant alert is received or we see a really long fork (%s in cmd is replaced by message)"));
     strUsage +=HelpMessageOpt("-assumevalid=<hex>", strprintf(_("If this block is in the chain assume that it and its ancestors are valid and potentially skip their script verification (0 to verify all, default: %s, testnet: %s)"), defaultChainParams->GetConsensus().defaultAssumeValid.GetHex(), testnetChainParams->GetConsensus().defaultAssumeValid.GetHex()));
+    strUsage += HelpMessageOpt("-blocksdir=<dir>", _("Specify blocks directory (default: <datadir>/blocks)"));
     strUsage += HelpMessageOpt("-blocknotify=<cmd>", _("Execute command when the best block changes (%s in cmd is replaced by block hash)"));
     strUsage += HelpMessageOpt("-blockreconstructionextratxn=<n>", strprintf(_("Extra transactions to keep in memory for compact block reconstructions (default: %u)"), DEFAULT_BLOCK_RECONSTRUCTION_EXTRA_TXN));
     if (showDebug)
         strUsage += HelpMessageOpt("-blocksonly", strprintf(_("Whether to operate in a blocks only mode (default: %u)"), DEFAULT_BLOCKSONLY));
     strUsage += HelpMessageOpt("-conf=<file>", strprintf(_("Specify configuration file. Relative paths will be prefixed by datadir location. (default: %s)"), BITCOIN_CONF_FILENAME));
-    if (mode == HMM_BITCOIND)
+    if (mode == HelpMessageMode::BITCOIND)
     {
 #if HAVE_DECL_DAEMON
         strUsage += HelpMessageOpt("-daemon", _("Run in the background as a daemon and accept commands"));
@@ -423,9 +417,7 @@ std::string HelpMessage(HelpMessageMode mode)
     strUsage += HelpMessageOpt("-bootstrap", _("Enable BitcoinQuark bootstrap mode. Allows BTQ client to connect to Bitcoin p2p network to download blockchain history."));
     strUsage += HelpMessageOpt("-skiphardforkibd", _("Skip Initial Block Download when reaching hardfork block."));
 
-#ifdef ENABLE_WALLET
-    strUsage += GetWalletHelpString(showDebug);
-#endif
+    strUsage += g_wallet_init_interface->GetHelpString(showDebug);
 
 #if ENABLE_ZMQ
     strUsage += HelpMessageGroup(_("ZeroMQ notification options:"));
@@ -436,18 +428,16 @@ std::string HelpMessage(HelpMessageMode mode)
 #endif
 
     strUsage += HelpMessageGroup(_("Debugging/Testing options:"));
-    if (showDebug)
-    {
+    if (showDebug) {
         strUsage += HelpMessageOpt("-checkblocks=<n>", strprintf(_("How many blocks to check at startup (default: %u, 0 = all)"), DEFAULT_CHECKBLOCKS));
         strUsage += HelpMessageOpt("-checklevel=<n>", strprintf(_("How thorough the block verification of -checkblocks is (0-4, default: %u)"), DEFAULT_CHECKLEVEL));
-        strUsage += HelpMessageOpt("-checkblockindex", strprintf("Do a full consistency check for mapBlockIndex, setBlockIndexCandidates, chainActive and mapBlocksUnlinked occasionally. Also sets -checkmempool (default: %u)", defaultChainParams->DefaultConsistencyChecks()));
+        strUsage += HelpMessageOpt("-checkblockindex", strprintf("Do a full consistency check for mapBlockIndex, setBlockIndexCandidates, chainActive and mapBlocksUnlinked occasionally. (default: %u)", defaultChainParams->DefaultConsistencyChecks()));
         strUsage += HelpMessageOpt("-checkmempool=<n>", strprintf("Run checks every <n> transactions (default: %u)", defaultChainParams->DefaultConsistencyChecks()));
         strUsage += HelpMessageOpt("-checkpoints", strprintf("Disable expensive verification for known chain history (default: %u)", DEFAULT_CHECKPOINTS_ENABLED));
         strUsage += HelpMessageOpt("-disablesafemode", strprintf("Disable safemode, override a real safe mode event (default: %u)", DEFAULT_DISABLE_SAFEMODE));
         strUsage += HelpMessageOpt("-deprecatedrpc=<method>", "Allows deprecated RPC method(s) to be used");
         strUsage += HelpMessageOpt("-testsafemode", strprintf("Force safe mode (default: %u)", DEFAULT_TESTSAFEMODE));
         strUsage += HelpMessageOpt("-dropmessagestest=<n>", "Randomly drop 1 of every <n> network messages");
-        strUsage += HelpMessageOpt("-fuzzmessagestest=<n>", "Randomly fuzz 1 of every <n> network messages");
         strUsage += HelpMessageOpt("-stopafterblockimport", strprintf("Stop running after importing blocks from disk (default: %u)", DEFAULT_STOPAFTERBLOCKIMPORT));
         strUsage += HelpMessageOpt("-stopatheight", strprintf("Stop running after reaching the given height in the main chain (default: %u)", DEFAULT_STOPATHEIGHT));
         strUsage += HelpMessageOpt("-syncatheight", strprintf("Stop synchronizing blocks after reaching the given height in the main chain (default: %u)", DEFAULT_SYNCATHEIGHT));
@@ -606,7 +596,7 @@ void CleanupBlockRevFiles()
     // Remove the rev files immediately and insert the blk file paths into an
     // ordered map keyed by block file index.
     LogPrintf("Removing unusable blk?????.dat and rev?????.dat files for -reindex with -prune\n");
-    fs::path blocksdir = GetDataDir() / "blocks";
+    fs::path blocksdir = GetBlocksDir();
     for (fs::directory_iterator it(blocksdir); it != fs::directory_iterator(); it++) {
         if (fs::is_regular_file(*it) &&
             it->path().filename().string().length() == 12 &&
@@ -703,8 +693,8 @@ void ThreadImport(const Config &config, std::vector<fs::path> vImportFiles)
     } // End scope of CImportingNow
     if (gArgs.GetArg("-persistmempool", DEFAULT_PERSIST_MEMPOOL)) {
         LoadMempool();
-        fDumpMempoolLater = !fRequestShutdown;
     }
+    g_is_mempool_loaded = !fRequestShutdown;
 }
 
 /** Sanity checks
@@ -808,15 +798,6 @@ void InitParameterInteraction()
         if (gArgs.SoftSetBoolArg("-whitelistrelay", true))
             LogPrintf("%s: parameter interaction: -whitelistforcerelay=1 -> setting -whitelistrelay=1\n", __func__);
     }
-
-    if (gArgs.IsArgSet("-blockmaxsize")) {
-        unsigned int max_size = gArgs.GetArg("-blockmaxsize", 0);
-        if (gArgs.SoftSetArg("blockmaxweight", strprintf("%d", max_size * WITNESS_SCALE_FACTOR))) {
-            LogPrintf("%s: parameter interaction: -blockmaxsize=%d -> setting -blockmaxweight=%d (-blockmaxsize is deprecated!)\n", __func__, max_size, max_size * WITNESS_SCALE_FACTOR);
-        } else {
-            LogPrintf("%s: Ignoring blockmaxsize setting which is overridden by blockmaxweight", __func__);
-        }
-    }
 }
 
 static std::string ResolveErrMsg(const char * const optname, const std::string& strBind)
@@ -917,6 +898,10 @@ bool AppInitParameterInteraction(Config& config)
     // ********************************************************* Step 2: parameter interactions
 
     // also see: InitParameterInteraction()
+
+    if (!fs::is_directory(GetBlocksDir(false))) {
+        return InitError(strprintf(_("Specified blocks directory \"%s\" does not exist.\n"), gArgs.GetArg("-blocksdir", "").c_str()));
+    }
 
     // if using block pruning, then disallow txindex
     if (gArgs.GetArg("-prune", 0)) {
@@ -1127,10 +1112,7 @@ bool AppInitParameterInteraction(Config& config)
         return InitError(strprintf("acceptnonstdtxn is not currently supported for %s chain", chainparams.NetworkIDString()));
     nBytesPerSigOp = gArgs.GetArg("-bytespersigop", nBytesPerSigOp);
 
-#ifdef ENABLE_WALLET
-    if (!WalletParameterInteraction())
-        return false;
-#endif
+    if (!g_wallet_init_interface->ParameterInteraction()) return false;
 
     fIsBareMultisigStd = gArgs.GetBoolArg("-permitbaremultisig", DEFAULT_PERMIT_BAREMULTISIG);
     fAcceptDatacarrier = gArgs.GetBoolArg("-datacarrier", DEFAULT_ACCEPT_DATACARRIER);
@@ -1304,9 +1286,7 @@ bool AppInitMain(const Config& config)
      * available in the GUI RPC console even if external calls are disabled.
      */
     RegisterAllCoreRPCCommands(tableRPC);
-#ifdef ENABLE_WALLET
-    RegisterWalletRPC(tableRPC);
-#endif
+    g_wallet_init_interface->RegisterRPC(tableRPC);
 
     /* Start the RPC server already.  It will be started in "warmup" mode
      * and not really process calls already (but it will signify connections
@@ -1323,10 +1303,8 @@ bool AppInitMain(const Config& config)
     int64_t nStart;
 
     // ********************************************************* Step 5: verify wallet database integrity
-#ifdef ENABLE_WALLET
-    if (!VerifyWallets())
-        return false;
-#endif
+    if (!g_wallet_init_interface->Verify()) return false;
+
     // ********************************************************* Step 6: network initialization
     // Note that we absolutely cannot open any actual connections
     // until the very end ("start node") as the UTXO/block state
@@ -1647,12 +1625,7 @@ bool AppInitMain(const Config& config)
     fFeeEstimatesInitialized = true;
 
     // ********************************************************* Step 8: load wallet
-#ifdef ENABLE_WALLET
-    if (!OpenWallets())
-        return false;
-#else
-    LogPrintf("No wallet support compiled in!\n");
-#endif
+    if (!g_wallet_init_interface->Open()) return false;
 
     // ********************************************************* Step 9: data directory maintenance
 
@@ -1678,7 +1651,7 @@ bool AppInitMain(const Config& config)
 
     // ********************************************************* Step 10: import blocks
 
-    if (!CheckDiskSpace())
+    if (!CheckDiskSpace() && !CheckDiskSpace(0, true))
         return false;
 
     // Either install a handler to notify us when genesis activates, or set fHaveGenesis directly.
@@ -1798,9 +1771,7 @@ bool AppInitMain(const Config& config)
     SetRPCWarmupFinished();
     uiInterface.InitMessage(_("Done loading"));
 
-#ifdef ENABLE_WALLET
-    StartWallets(scheduler);
-#endif
+    g_wallet_init_interface->Start(scheduler);
 
     return true;
 }
