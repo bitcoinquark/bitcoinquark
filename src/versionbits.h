@@ -19,12 +19,12 @@ static const int32_t VERSIONBITS_NUM_BITS = 30;
 /** What bits to set in version for bitcoinquark blocks */
 static const int32_t VERSIONBITS_BITCOIN_QUARK = 1 << 30;
 
-enum ThresholdState {
-    THRESHOLD_DEFINED,
-    THRESHOLD_STARTED,
-    THRESHOLD_LOCKED_IN,
-    THRESHOLD_ACTIVE,
-    THRESHOLD_FAILED,
+enum class ThresholdState {
+    DEFINED,
+    STARTED,
+    LOCKED_IN,
+    ACTIVE,
+    FAILED,
 };
 
 // A map that gives the state for blocks whose height is a multiple of Period().

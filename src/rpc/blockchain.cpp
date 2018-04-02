@@ -436,6 +436,9 @@ std::string EntryDescriptionString()
            "    \"wtxid\" : hash,         (string) hash of serialized transaction, including witness data\n"
            "    \"depends\" : [           (array) unconfirmed transactions used as inputs for this transaction\n"
            "        \"transactionid\",    (string) parent transaction id\n"
+           "       ... ]\n"
+           "    \"spentby\" : [           (array) unconfirmed transactions spending outputs from this transaction\n"
+           "        \"transactionid\",    (string) child transaction id\n"
            "       ... ]\n";
 }
 
@@ -470,6 +473,15 @@ void entryToJSON(UniValue &info, const CTxMemPoolEntry &e)
     }
 
     info.pushKV("depends", depends);
+
+    UniValue spent(UniValue::VARR);
+    const CTxMemPool::txiter &it = mempool.mapTx.find(tx.GetHash());
+    const CTxMemPool::setEntries &setChildren = mempool.GetMemPoolChildren(it);
+    for (const CTxMemPool::txiter &childiter : setChildren) {
+        spent.push_back(childiter->GetTx().GetHash().ToString());
+    }
+
+    info.pushKV("spentby", spent);
 }
 
 UniValue mempoolToJSON(bool fVerbose)
@@ -840,10 +852,10 @@ UniValue getblockheader(const JSONRPCRequest& request)
         legacy_format = true;
     }
 
-    if (mapBlockIndex.count(hash) == 0)
+    const CBlockIndex* pblockindex = LookupBlockIndex(hash);
+    if (!pblockindex) {
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
-
-    CBlockIndex* pblockindex = mapBlockIndex[hash];
+    }
 
     if (!fVerbose)
     {
@@ -925,12 +937,12 @@ UniValue getblock(const JSONRPCRequest& request)
         legacy_format = true;
     }
 
-    if (mapBlockIndex.count(hash) == 0)
+    const CBlockIndex* pblockindex = LookupBlockIndex(hash);
+    if (!pblockindex) {
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
+    }
 
     CBlock block;
-    CBlockIndex* pblockindex = mapBlockIndex[hash];
-
     if (fHavePruned && !(pblockindex->nStatus & BLOCK_HAVE_DATA) && pblockindex->nTx > 0)
         throw JSONRPCError(RPC_MISC_ERROR, "Block not available (pruned data)");
 
@@ -972,18 +984,18 @@ static void ApplyStats(CCoinsStats &stats, CHashWriter& ss, const uint256& hash,
 {
     assert(!outputs.empty());
     ss << hash;
-    ss << VARINT(outputs.begin()->second.nHeight * 2 + outputs.begin()->second.fCoinBase);
+    ss << VARINT(outputs.begin()->second.nHeight * 2 + outputs.begin()->second.fCoinBase ? 1u : 0u);
     stats.nTransactions++;
     for (const auto output : outputs) {
         ss << VARINT(output.first + 1);
         ss << output.second.out.scriptPubKey;
-        ss << VARINT(output.second.out.nValue);
+        ss << VARINT(output.second.out.nValue, VarIntMode::NONNEGATIVE_SIGNED);
         stats.nTransactionOutputs++;
         stats.nTotalAmount += output.second.out.nValue;
         stats.nBogoSize += 32 /* txid */ + 4 /* vout index */ + 4 /* height + coinbase */ + 8 /* amount */ +
                            2 /* scriptPubKey len */ + output.second.out.scriptPubKey.size() /* scriptPubKey */;
     }
-    ss << VARINT(0);
+    ss << VARINT(0u);
 }
 
 //! Calculate statistics about the unspent transaction output set
@@ -996,7 +1008,7 @@ static bool GetUTXOStats(CCoinsView *view, CCoinsStats &stats)
     stats.hashBlock = pcursor->GetBestBlock();
     {
         LOCK(cs_main);
-        stats.nHeight = mapBlockIndex.find(stats.hashBlock)->second->nHeight;
+        stats.nHeight = LookupBlockIndex(stats.hashBlock)->nHeight;
     }
     ss << stats.hashBlock;
     uint256 prevkey;
@@ -1179,8 +1191,7 @@ UniValue gettxout(const JSONRPCRequest& request)
         }
     }
 
-    BlockMap::iterator it = mapBlockIndex.find(pcoinsTip->GetBestBlock());
-    CBlockIndex *pindex = it->second;
+    const CBlockIndex* pindex = LookupBlockIndex(pcoinsTip->GetBestBlock());
     ret.pushKV("bestblock", pindex->GetBlockHash().GetHex());
     if (coin.nHeight == MEMPOOL_HEIGHT) {
         ret.pushKV("confirmations", 0);
@@ -1259,20 +1270,20 @@ static UniValue BIP9SoftForkDesc(const Consensus::Params& consensusParams, Conse
     UniValue rv(UniValue::VOBJ);
     const ThresholdState thresholdState = VersionBitsTipState(consensusParams, id);
     switch (thresholdState) {
-    case THRESHOLD_DEFINED: rv.pushKV("status", "defined"); break;
-    case THRESHOLD_STARTED: rv.pushKV("status", "started"); break;
-    case THRESHOLD_LOCKED_IN: rv.pushKV("status", "locked_in"); break;
-    case THRESHOLD_ACTIVE: rv.pushKV("status", "active"); break;
-    case THRESHOLD_FAILED: rv.pushKV("status", "failed"); break;
+    case ThresholdState::DEFINED: rv.pushKV("status", "defined"); break;
+    case ThresholdState::STARTED: rv.pushKV("status", "started"); break;
+    case ThresholdState::LOCKED_IN: rv.pushKV("status", "locked_in"); break;
+    case ThresholdState::ACTIVE: rv.pushKV("status", "active"); break;
+    case ThresholdState::FAILED: rv.pushKV("status", "failed"); break;
     }
-    if (THRESHOLD_STARTED == thresholdState)
+    if (ThresholdState::STARTED == thresholdState)
     {
         rv.pushKV("bit", consensusParams.vDeployments[id].bit);
     }
     rv.pushKV("startTime", consensusParams.vDeployments[id].nStartTime);
     rv.pushKV("timeout", consensusParams.vDeployments[id].nTimeout);
     rv.pushKV("since", VersionBitsTipStateSinceHeight(consensusParams, id));
-    if (THRESHOLD_STARTED == thresholdState)
+    if (ThresholdState::STARTED == thresholdState)
     {
         UniValue statsUV(UniValue::VOBJ);
         BIP9Stats statsStruct = VersionBitsTipStatistics(consensusParams, id);
@@ -1574,10 +1585,10 @@ UniValue preciousblock(const JSONRPCRequest& request)
 
     {
         LOCK(cs_main);
-        if (mapBlockIndex.count(hash) == 0)
+        pblockindex = LookupBlockIndex(hash);
+        if (!pblockindex) {
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
-
-        pblockindex = mapBlockIndex[hash];
+        }
     }
 
     CValidationState state;
@@ -1610,10 +1621,11 @@ UniValue invalidateblock(const JSONRPCRequest& request)
 
     {
         LOCK(cs_main);
-        if (mapBlockIndex.count(hash) == 0)
+        CBlockIndex* pblockindex = LookupBlockIndex(hash);
+        if (!pblockindex) {
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
+        }
 
-        CBlockIndex* pblockindex = mapBlockIndex[hash];
         InvalidateBlock(state, Params(), pblockindex);
     }
 
@@ -1648,10 +1660,11 @@ UniValue reconsiderblock(const JSONRPCRequest& request)
 
     {
         LOCK(cs_main);
-        if (mapBlockIndex.count(hash) == 0)
+        CBlockIndex* pblockindex = LookupBlockIndex(hash);
+        if (!pblockindex) {
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
+        }
 
-        CBlockIndex* pblockindex = mapBlockIndex[hash];
         ResetBlockFailureFlags(pblockindex);
     }
 
@@ -1698,11 +1711,10 @@ UniValue getchaintxstats(const JSONRPCRequest& request)
     } else {
         uint256 hash = uint256S(request.params[1].get_str());
         LOCK(cs_main);
-        auto it = mapBlockIndex.find(hash);
-        if (it == mapBlockIndex.end()) {
+        pindex = LookupBlockIndex(hash);
+        if (!pindex) {
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
         }
-        pindex = it->second;
         if (!chainActive.Contains(pindex)) {
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Block is not in main chain");
         }
@@ -1745,11 +1757,15 @@ UniValue savemempool(const JSONRPCRequest& request)
     if (request.fHelp || request.params.size() != 0) {
         throw std::runtime_error(
             "savemempool\n"
-            "\nDumps the mempool to disk.\n"
+            "\nDumps the mempool to disk. It will fail until the previous dump is fully loaded.\n"
             "\nExamples:\n"
             + HelpExampleCli("savemempool", "")
             + HelpExampleRpc("savemempool", "")
         );
+    }
+
+    if (!g_is_mempool_loaded) {
+        throw JSONRPCError(RPC_MISC_ERROR, "The mempool was not loaded yet");
     }
 
     if (!DumpMempool()) {

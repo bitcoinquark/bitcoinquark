@@ -9,6 +9,7 @@
 #include <core_io.h>
 #include <crypto/ripemd160.h>
 #include <init.h>
+#include <key_io.h>
 #include <validation.h>
 #include <httpserver.h>
 #include <net.h>
@@ -225,13 +226,10 @@ UniValue signmessagewithprivkey(const JSONRPCRequest& request)
     std::string strPrivkey = request.params[0].get_str();
     std::string strMessage = request.params[1].get_str();
 
-    CBitcoinSecret vchSecret;
-    bool fGood = vchSecret.SetString(strPrivkey);
-    if (!fGood)
+    CKey key = DecodeSecret(strPrivkey);
+    if (!key.IsValid()) {
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid private key");
-    CKey key = vchSecret.GetKey();
-    if (!key.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Private key outside allowed range");
+    }
 
     CHashWriter ss(SER_GETHASH, 0);
     ss << strMessageMagic;
