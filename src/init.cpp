@@ -520,7 +520,7 @@ std::string HelpMessage(HelpMessageMode mode)
 
 std::string LicenseInfo()
 {
-    const std::string URL_SOURCE_CODE = "<https://github.com/bitcoinquark/bitcoin>";
+    const std::string URL_SOURCE_CODE = "<https://github.com/bitcoinquark/bitcoinquark>";
     const std::string URL_WEBSITE = "<https://www.bitcoinquark.org>";
 
     return CopyrightHolders(strprintf(_("Copyright (C) %i-%i"), 2009, COPYRIGHT_YEAR) + " ") + "\n" +

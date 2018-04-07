@@ -16,7 +16,7 @@ This means that Bitcoin holders as of block 520520 have the same amount of Bitco
 If your Bitcoins are stored by a third party such as an exchange, then you must inquire with them about your Bitcoin Quark.
 
 For more information, as well as an immediately useable, binary version of
-the Bitcoin Quark software, see https://github.com/bitcoinquark/bitcoin/releases, or read the
+the Bitcoin Quark software, see https://github.com/bitcoinquark/bitcoinquark/releases, or read the
 [original whitepaper](https://bitcoincore.org/bitcoin.pdf).
 
 License
@@ -29,7 +29,7 @@ Development Process
 -------------------
 
 The `master` branch is regularly built and tested, but is not guaranteed to be
-completely stable. [Tags](https://github.com/bitcoinquark/bitcoin/tags) are created
+completely stable. [Tags](https://github.com/bitcoinquark/bitcoinquark/tags) are created
 regularly to indicate new official, stable release versions of Bitcoin Quark.
 
 The contribution workflow is described in [CONTRIBUTING.md](CONTRIBUTING.md).

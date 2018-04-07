@@ -22,7 +22,7 @@ packages:
 - "ca-certificates"
 - "python"
 remotes:
-- "url": "https://github.com/bitcoinquark/bitcoin.git"
+- "url": "https://github.com/bitcoinquark/bitcoinquark.git"
   "dir": "bitcoin"
 files: []
 script: |
