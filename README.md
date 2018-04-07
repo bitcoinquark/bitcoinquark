@@ -1,7 +1,7 @@
 Bitcoin Quark integration/staging tree
 =====================================
 
-[![Build Status](https://travis-ci.org/bitcoinquark/bitcoin.svg?branch=master)](https://travis-ci.org/bitcoinquark/bitcoin)
+[![Build Status](https://travis-ci.org/bitcoinquark/bitcoinquark.svg?branch=master)](https://travis-ci.org/bitcoinquark/bitcoinquark)
 
 https://www.bitcoinquark.org
 
