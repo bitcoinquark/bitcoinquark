@@ -6,7 +6,6 @@
 #include <key_io.h>
 #include <rpc/safemode.h>
 #include <rpc/server.h>
-#include <wallet/init.h>
 #include <validation.h>
 #include <script/script.h>
 #include <script/standard.h>
@@ -100,6 +99,7 @@ UniValue importprivkey(const JSONRPCRequest& request)
         throw std::runtime_error(
             "importprivkey \"privkey\" ( \"label\" ) ( rescan )\n"
             "\nAdds a private key (as returned by dumpprivkey) to your wallet. Requires a new wallet backup.\n"
+            "Hint: use importmulti to import more than one private key.\n"
             "\nArguments:\n"
             "1. \"privkey\"          (string, required) The private key (see dumpprivkey)\n"
             "2. \"label\"            (string, optional, default=\"\") An optional label\n"

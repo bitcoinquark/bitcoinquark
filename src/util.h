@@ -23,6 +23,7 @@
 #include <atomic>
 #include <exception>
 #include <map>
+#include <memory>
 #include <stdint.h>
 #include <string>
 #include <unordered_set>
@@ -145,14 +146,16 @@ template<typename T, typename... Args> static inline void MarkUsed(const T& t, c
 #define LogPrint(category, ...) do { MarkUsed(__VA_ARGS__); } while(0)
 #else
 #define LogPrintf(...) do { \
-    std::string _log_msg_; /* Unlikely name to avoid shadowing variables */ \
-    try { \
-        _log_msg_ = tfm::format(__VA_ARGS__); \
-    } catch (tinyformat::format_error &fmterr) { \
-        /* Original format string will have newline so don't add one here */ \
-        _log_msg_ = "Error \"" + std::string(fmterr.what()) + "\" while formatting log message: " + FormatStringFromLogArgs(__VA_ARGS__); \
+    if (fPrintToConsole || fPrintToDebugLog) { \
+        std::string _log_msg_; /* Unlikely name to avoid shadowing variables */ \
+        try { \
+            _log_msg_ = tfm::format(__VA_ARGS__); \
+        } catch (tinyformat::format_error &fmterr) { \
+            /* Original format string will have newline so don't add one here */ \
+            _log_msg_ = "Error \"" + std::string(fmterr.what()) + "\" while formatting log message: " + FormatStringFromLogArgs(__VA_ARGS__); \
+        } \
+        LogPrintStr(_log_msg_); \
     } \
-    LogPrintStr(_log_msg_); \
 } while(0)
 
 #define LogPrint(category, ...) do { \
@@ -227,6 +230,8 @@ protected:
     std::map<std::string, std::string> mapArgs;
     std::map<std::string, std::vector<std::string>> mapMultiArgs;
     std::unordered_set<std::string> m_negated_args;
+
+    void ReadConfigStream(std::istream& stream);
 
 public:
     void ParseParameters(int argc, const char*const argv[]);
@@ -308,6 +313,12 @@ public:
     // Remove an arg setting, used only in testing
     void ClearArg(const std::string &strArg);
 
+    /**
+     * Looks for -regtest, -testnet and returns the appropriate BIP70 chain name.
+     * @return CBaseChainParams::MAIN by default; raises runtime error if an invalid combination is given.
+     */
+    std::string GetChainName() const;
+
 private:
 
     // Munge -nofoo into -foo=0 and track the value as negated.
@@ -315,6 +326,11 @@ private:
 };
 
 extern ArgsManager gArgs;
+
+/**
+ * @return true if help has been requested via a command-line arg
+ */
+bool HelpRequested(const ArgsManager& args);
 
 /**
  * Format a string to be used as group of options in help messages
@@ -377,5 +393,14 @@ std::unique_ptr<T> MakeUnique(Args&&... args)
 {
     return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
+
+/**
+ * On platforms that support it, tell the kernel the calling thread is
+ * CPU-intensive and non-interactive. See SCHED_BATCH in sched(7) for details.
+ *
+ * @return The return value of sched_setschedule(), or 1 on systems without
+ * sched_setchedule().
+ */
+int ScheduleBatchPriority(void);
 
 #endif // BITCOIN_UTIL_H

@@ -71,6 +71,9 @@ code.
   - Constant names are all uppercase, and use `_` to separate words.
   - Class names, function names and method names are UpperCamelCase
     (PascalCase). Do not prefix class names with `C`.
+  - Test suite naming convention: The Boost test suite in file
+    `src/test/foo_tests.cpp` should be named `foo_tests`. Test suite names
+    must be unique.
 
 - **Miscellaneous**
   - `++i` is preferred over `i++`.
@@ -448,12 +451,21 @@ C++ data structures
 
 - Vector bounds checking is only enabled in debug mode. Do not rely on it
 
-- Make sure that constructors initialize all fields. If this is skipped for a
-  good reason (i.e., optimization on the critical path), add an explicit
-  comment about this
+- Initialize all non-static class members where they are defined.
+  If this is skipped for a good reason (i.e., optimization on the critical
+  path), add an explicit comment about this
 
   - *Rationale*: Ensure determinism by avoiding accidental use of uninitialized
     values. Also, static analyzers balk about this.
+    Initializing the members in the declaration makes it easy to
+    spot uninitialized ones.
+
+```cpp
+class A
+{
+    uint32_t m_count{0};
+}
+```
 
 - By default, declare single-argument constructors `explicit`.
 
@@ -471,18 +483,6 @@ C++ data structures
 
   - *Rationale*: Easier to understand what is happening, thus easier to spot mistakes, even for those
   that are not language lawyers
-
-- Initialize all non-static class members where they are defined
-
-  - *Rationale*: Initializing the members in the declaration makes it easy to spot uninitialized ones,
-  and avoids accidentally reading uninitialized memory
-
-```cpp
-class A
-{
-    uint32_t m_count{0};
-}
-```
 
 Strings and formatting
 ------------------------
@@ -569,8 +569,7 @@ Source code organization
   - *Rationale*: Shorter and simpler header files are easier to read, and reduce compile time
 
 - Every `.cpp` and `.h` file should `#include` every header file it directly uses classes, functions or other
-  definitions from, even if those headers are already included indirectly through other headers. One exception
-  is that a `.cpp` file does not need to re-include the includes already included in its corresponding `.h` file.
+  definitions from, even if those headers are already included indirectly through other headers.
 
   - *Rationale*: Excluding headers because they are already indirectly included results in compilation
     failures when those indirect dependencies change. Furthermore, it obscures what the real code
@@ -604,6 +603,16 @@ namespace {
     source file into account. This allows quoted includes to stand out more when
     the location of the source file actually is relevant.
 
+- Use include guards to avoid the problem of double inclusion. The header file
+  `foo/bar.h` should use the include guard identifier `BITCOIN_FOO_BAR_H`, e.g.
+
+```c++
+#ifndef BITCOIN_FOO_BAR_H
+#define BITCOIN_FOO_BAR_H
+...
+#endif // BITCOIN_FOO_BAR_H
+```
+
 GUI
 -----
 
@@ -612,6 +621,19 @@ GUI
   - *Rationale*: Model classes pass through events and data from the core, they
     should not interact with the user. That's where View classes come in. The converse also
     holds: try to not directly access core data structures from Views.
+
+- Avoid adding slow or blocking code in the GUI thread. In particular do not
+  add new `interfaces::Node` and `interfaces::Wallet` method calls, even if they
+  may be fast now, in case they are changed to lock or communicate across
+  processes in the future.
+
+  Prefer to offload work from the GUI thread to worker threads (see
+  `RPCExecutor` in console code as an example) or take other steps (see
+  https://doc.qt.io/archives/qq/qq27-responsive-guis.html) to keep the GUI
+  responsive.
+
+  - *Rationale*: Blocking the GUI thread can increase latency, and lead to
+    hangs and deadlocks.
 
 Subtrees
 ----------

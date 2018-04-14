@@ -31,6 +31,8 @@
 #include <utilmoneystr.h>
 #include <utilstrencodings.h>
 #include <validationinterface.h>
+#include <memory>
+
 #if defined(NDEBUG)
 # error "Bitcoin cannot be compiled without assertions."
 #endif

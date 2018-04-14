@@ -887,9 +887,6 @@ UniValue SignTransaction(CMutableTransaction& mtx, const UniValue& prevTxsUnival
             if (is_temp_keystore && (scriptPubKey.IsPayToScriptHash() || scriptPubKey.IsPayToWitnessScriptHash())) {
                 RPCTypeCheckObj(prevOut,
                     {
-                        {"txid", UniValueType(UniValue::VSTR)},
-                        {"vout", UniValueType(UniValue::VNUM)},
-                        {"scriptPubKey", UniValueType(UniValue::VSTR)},
                         {"redeemScript", UniValueType(UniValue::VSTR)},
                     });
                 UniValue v = find_value(prevOut, "redeemScript");
@@ -953,7 +950,7 @@ UniValue SignTransaction(CMutableTransaction& mtx, const UniValue& prevTxsUnival
         SignatureData sigdata;
         // Only sign SIGHASH_SINGLE if there's a corresponding output:
         if (!fHashSingle || (i < mtx.vout.size())) {
-            ProduceSignature(MutableTransactionSignatureCreator(keystore, &mtx, i, amount, nHashType), prevPubKey, sigdata);
+            ProduceSignature(*keystore, MutableTransactionSignatureCreator(&mtx, i, amount, nHashType), prevPubKey, sigdata);
         }
         sigdata = CombineSignatures(prevPubKey, TransactionSignatureChecker(&txConst, i, amount), sigdata, DataFromTransaction(mtx, i));
 
@@ -1268,6 +1265,87 @@ UniValue sendrawtransaction(const JSONRPCRequest& request)
     return hashTx.GetHex();
 }
 
+UniValue testmempoolaccept(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() < 1 || request.params.size() > 2) {
+        throw std::runtime_error(
+            // clang-format off
+            "testmempoolaccept [\"rawtxs\"] ( allowhighfees )\n"
+            "\nReturns if raw transaction (serialized, hex-encoded) would be accepted by mempool.\n"
+            "\nThis checks if the transaction violates the consensus or policy rules.\n"
+            "\nSee sendrawtransaction call.\n"
+            "\nArguments:\n"
+            "1. [\"rawtxs\"]       (array, required) An array of hex strings of raw transactions.\n"
+            "                                        Length must be one for now.\n"
+            "2. allowhighfees    (boolean, optional, default=false) Allow high fees\n"
+            "\nResult:\n"
+            "[                   (array) The result of the mempool acceptance test for each raw transaction in the input array.\n"
+            "                            Length is exactly one for now.\n"
+            " {\n"
+            "  \"txid\"           (string) The transaction hash in hex\n"
+            "  \"allowed\"        (boolean) If the mempool allows this tx to be inserted\n"
+            "  \"reject-reason\"  (string) Rejection string (only present when 'allowed' is false)\n"
+            " }\n"
+            "]\n"
+            "\nExamples:\n"
+            "\nCreate a transaction\n"
+            + HelpExampleCli("createrawtransaction", "\"[{\\\"txid\\\" : \\\"mytxid\\\",\\\"vout\\\":0}]\" \"{\\\"myaddress\\\":0.01}\"") +
+            "Sign the transaction, and get back the hex\n"
+            + HelpExampleCli("signrawtransaction", "\"myhex\"") +
+            "\nTest acceptance of the transaction (signed hex)\n"
+            + HelpExampleCli("testmempoolaccept", "\"signedhex\"") +
+            "\nAs a json rpc call\n"
+            + HelpExampleRpc("testmempoolaccept", "[\"signedhex\"]")
+            // clang-format on
+            );
+    }
+
+    ObserveSafeMode();
+
+    RPCTypeCheck(request.params, {UniValue::VARR, UniValue::VBOOL});
+    if (request.params[0].get_array().size() != 1) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Array must contain exactly one raw transaction for now");
+    }
+
+    CMutableTransaction mtx;
+    if (!DecodeHexTx(mtx, request.params[0].get_array()[0].get_str())) {
+        throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed");
+    }
+    CTransactionRef tx(MakeTransactionRef(std::move(mtx)));
+    const uint256& tx_hash = tx->GetHash();
+
+    CAmount max_raw_tx_fee = ::maxTxFee;
+    if (!request.params[1].isNull() && request.params[1].get_bool()) {
+        max_raw_tx_fee = 0;
+    }
+
+    UniValue result(UniValue::VARR);
+    UniValue result_0(UniValue::VOBJ);
+    result_0.pushKV("txid", tx_hash.GetHex());
+
+    CValidationState state;
+    bool missing_inputs;
+    bool test_accept_res;
+    {
+        LOCK(cs_main);
+        test_accept_res = AcceptToMemoryPool(mempool, state, std::move(tx), &missing_inputs,
+            nullptr /* plTxnReplaced */, false /* bypass_limits */, max_raw_tx_fee, /* test_accept */ true);
+    }
+    result_0.pushKV("allowed", test_accept_res);
+    if (!test_accept_res) {
+        if (state.IsInvalid()) {
+            result_0.pushKV("reject-reason", strprintf("%i: %s", state.GetRejectCode(), state.GetRejectReason()));
+        } else if (missing_inputs) {
+            result_0.pushKV("reject-reason", "missing-inputs");
+        } else {
+            result_0.pushKV("reject-reason", state.GetRejectReason());
+        }
+    }
+
+    result.push_back(std::move(result_0));
+    return result;
+}
+
 static const CRPCCommand commands[] =
 { //  category              name                            actor (function)            argNames
   //  --------------------- ------------------------        -----------------------     ----------
@@ -1279,6 +1357,7 @@ static const CRPCCommand commands[] =
     { "rawtransactions",    "combinerawtransaction",        &combinerawtransaction,     {"txs"} },
     { "rawtransactions",    "signrawtransaction",           &signrawtransaction,        {"hexstring","prevtxs","privkeys","sighashtype"} }, /* uses wallet if enabled */
     { "rawtransactions",    "signrawtransactionwithkey",    &signrawtransactionwithkey, {"hexstring","privkeys","prevtxs","sighashtype"} },
+    { "rawtransactions",    "testmempoolaccept",            &testmempoolaccept,         {"rawtxs","allowhighfees"} },
 
     { "blockchain",         "gettxoutproof",                &gettxoutproof,             {"txids", "blockhash"} },
     { "blockchain",         "verifytxoutproof",             &verifytxoutproof,          {"proof"} },

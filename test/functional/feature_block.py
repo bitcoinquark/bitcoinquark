@@ -47,15 +47,6 @@ from test_framework.util import assert_equal
 
 MAX_BLOCK_SIGOPS = 20000
 
-from test_framework.test_framework import ComparisonTestFramework
-from test_framework.util import *
-from test_framework.comptool import TestManager, TestInstance, RejectResult
-from test_framework.blocktools import *
-import time
-from test_framework.key import CECKey
-from test_framework.script import *
-from test_framework.mininode import network_thread_start
-import struct
 from test_framework.cdefs import LEGACY_MAX_BLOCK_SIZE, MAX_BLOCK_SIGOPS_PER_MB
 
 class PreviousSpendableOutput():

@@ -48,7 +48,6 @@
 #include <walletinitinterface.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <memory>
 
 #ifndef WIN32
 #include <signal.h>
@@ -73,7 +72,25 @@ static const bool DEFAULT_STOPAFTERBLOCKIMPORT = false;
 
 std::unique_ptr<CConnman> g_connman;
 std::unique_ptr<PeerLogicValidation> peerLogic;
-std::unique_ptr<WalletInitInterface> g_wallet_init_interface;
+
+#if !(ENABLE_WALLET)
+class DummyWalletInit : public WalletInitInterface {
+public:
+
+    std::string GetHelpString(bool showDebug) override {return std::string{};}
+    bool ParameterInteraction() override {return true;}
+    void RegisterRPC(CRPCTable &) override {}
+    bool Verify() override {return true;}
+    bool Open() override {LogPrintf("No wallet support compiled in!\n"); return true;}
+    void Start(CScheduler& scheduler) override {}
+    void Flush() override {}
+    void Stop() override {}
+    void Close() override {}
+};
+
+static DummyWalletInit g_dummy_wallet_init;
+WalletInitInterface* const g_wallet_init_interface = &g_dummy_wallet_init;
+#endif
 
 #if ENABLE_ZMQ
 static CZMQNotificationInterface* pzmqNotificationInterface = nullptr;
@@ -268,7 +285,6 @@ void Shutdown()
     GetMainSignals().UnregisterBackgroundSignalScheduler();
     GetMainSignals().UnregisterWithMempoolSignals(mempool);
     g_wallet_init_interface->Close();
-    g_wallet_init_interface.reset();
     globalVerifyHandle.reset();
     ECC_Stop();
     LogPrintf("%s: done\n", __func__);
@@ -309,7 +325,7 @@ void OnRPCStopped()
 {
     uiInterface.NotifyBlockTip.disconnect(&RPCNotifyBlockChange);
     RPCNotifyBlockChange(false, nullptr);
-    cvBlockChange.notify_all();
+    g_best_block_cv.notify_all();
     LogPrint(BCLog::RPC, "RPC stopped.\n");
 }
 
@@ -627,6 +643,7 @@ void ThreadImport(const Config &config, std::vector<fs::path> vImportFiles)
 {
     const CChainParams& chainparams = Params();
     RenameThread("bitcoin-loadblk");
+    ScheduleBatchPriority();
 
     {
     CImportingNow imp;
@@ -680,7 +697,7 @@ void ThreadImport(const Config &config, std::vector<fs::path> vImportFiles)
     // scan for better chains in the block chain database, that are not yet connected in the active best chain
     CValidationState state;
     if (!ActivateBestChain(config, state, chainparams)) {
-        LogPrintf("Failed to connect best block");
+        LogPrintf("Failed to connect best block\n");
         StartShutdown();
         return;
     }
@@ -1259,7 +1276,7 @@ bool AppInitMain(const Config& config)
 
     // Warn about relative -datadir path.
     if (gArgs.IsArgSet("-datadir") && !fs::path(gArgs.GetArg("-datadir", "")).is_absolute()) {
-        LogPrintf("Warning: relative datadir option '%s' specified, which will be interpreted relative to the "
+        LogPrintf("Warning: relative datadir option '%s' specified, which will be interpreted relative to the " /* Continued */
                   "current working directory '%s'. This is fragile, because if bitcoin is started in the future "
                   "from a different location, it will be unable to locate the current data files. There could "
                   "also be data loss if bitcoin is started while in a temporary directory.\n",
